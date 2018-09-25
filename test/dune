@@ -1,5 +1,5 @@
 (executables
-    (libraries resp)
+    (libraries resp-lwt-unix)
     (names test)
     (modules test))
 

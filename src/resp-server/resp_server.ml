@@ -126,7 +126,7 @@ module Make
             argc := n - 1;
             (Value.read_s (ic client) >>= function
               | `String s | `Bulk (`String s) ->
-                  let f = Hashtbl.find t.commands s in
+                  let f = try Hashtbl.find t.commands s with Not_found -> Hashtbl.find t.commands t.default in
                   f t.data client s !argc >>= (function
                     | Some x -> Value.write (oc client) x >>= fun () -> handle t client true
                     | None -> IO.return ())

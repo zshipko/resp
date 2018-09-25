@@ -3,6 +3,53 @@
    Distributed under the ISC license, see terms at the end of the file.
    %%NAME%% %%VERSION%%
   ---------------------------------------------------------------------------*)
+open Lwt.Infix
+
+module Value = Resp.String
+
+let check_value_rountrip =
+  let v = `Array [| `String "x"; `Integer 123L; `Bulk (`String "abc") |] in
+  let output = ref "" in
+  Value.write output v;
+  let v' = Value.read output in
+  assert (v = v')
+
+open Resp_lwt_unix
+
+module Server = Server.Make
+                  (Resp_server.Auth.String)
+                  (struct type data = (string, string) Hashtbl.t end)
+                  (Bulk.String)
+
+module Client = Client(Resp_lwt_unix.Bulk.String)
+
+let commands = [
+  "default", (fun _ht _client _cmd _nargs ->
+    Server.ok ());
+]
+
+let main =
+  match Lwt_unix.fork () with
+  | -1 -> Printf.eprintf "Unable to fork process"; exit 1
+  | 0 ->
+      Conduit_lwt_unix.init ~src:"127.0.0.1" () >>= fun ctx ->
+      let server = `TCP (`Port 1234) in
+      let data = Hashtbl.create 8 in
+      let server = Server.create ~commands ~default:"default" (ctx, server) data in
+      Server.start server
+  | n ->
+      Lwt_unix.sleep 1.0 >>= fun () ->
+      Conduit_lwt_unix.init () >>= fun ctx ->
+      let addr = Ipaddr.of_string_exn "127.0.0.1" in
+      let params = (ctx, `TCP (`IP addr, `Port 1234)) in
+      Client.connect params >>= fun (ic, oc) ->
+      Client.run_s (ic, oc) [| "DEFAULT" |] >>= (function
+      | `String s -> print_endline s; if s = "OK" then Lwt.return 0 else Lwt.return 1
+      | _ -> Lwt.return 1) >|= fun code ->
+      Unix.kill n 9;
+      exit code
+
+let () = Lwt_main.run main
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2018 Zach Shipko

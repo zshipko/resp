@@ -1,4 +1,4 @@
 (library
     (name resp_server)
     (public_name resp-server)
-    (libraries resp))
+    (libraries resp resp-client))

@@ -94,8 +94,8 @@ module type BULK = sig
   module Writer: WRITER with module IO = IO
 
   type bulk
-  val encoder: Writer.oc -> bulk -> int * (unit -> unit IO.t)
-  val decoder: Reader.ic -> int -> bulk IO.t
+  val encoder: (Writer.oc -> bulk -> int * (unit -> unit IO.t)) option
+  val decoder: (Reader.ic -> int -> bulk IO.t) option
 end
 
 module type S = sig
@@ -228,14 +228,14 @@ module Make (Bulk: BULK) = struct
   let ( >>= ) = IO.( >>= )
 
   let read ic = Reader.next ic >>= function
-    | Ok l -> Reader.decode ~f:Bulk.decoder ic l
+    | Ok l -> Reader.decode ?f:Bulk.decoder ic l
     | Error e -> raise (Exc e)
 
   let read_s ic = Reader.next ic >>= function
     | Ok l -> Reader.decode ic l
     | Error e -> raise (Exc e)
 
-  let write oc = Writer.encode ~f:Bulk.encoder oc
+  let write oc = Writer.encode ?f:Bulk.encoder oc
 end
 
 module Bulk = struct
@@ -245,13 +245,8 @@ module Bulk = struct
     module Writer = Writer
     type bulk = string
 
-    let encoder oc s =
-      String.length s,
-      (fun () ->
-        Writer.write oc s)
-
-    let decoder ic n =
-      Reader.read ic n
+    let encoder = None
+    let decoder = None
   end
 end
 

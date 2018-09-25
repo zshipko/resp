@@ -87,8 +87,8 @@ module type BULK = sig
   module Writer: WRITER with module IO = IO
 
   type bulk
-  val encoder: Writer.oc -> bulk -> int * (unit -> unit IO.t)
-  val decoder: Reader.ic -> int -> bulk IO.t
+  val encoder: (Writer.oc -> bulk -> int * (unit -> unit IO.t)) option
+  val decoder: (Reader.ic -> int -> bulk IO.t) option
 end
 
 module type S = sig

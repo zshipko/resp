@@ -2,7 +2,7 @@ resp — REdis Serialization Protocol library for OCaml
 -------------------------------------------------------------------------------
 %%VERSION%%
 
-resp is TODO
+resp is an OCaml library for working with the [Redis Serialization Protocol](https://redis.io/topics/protocol). It provides a streaming interface for building clients and servers that communicate using RESP.
 
 resp is distributed under the ISC license.
 

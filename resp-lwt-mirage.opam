@@ -1,0 +1,32 @@
+opam-version: "1.2"
+maintainer: "Zach Shipko <zachshipko@gmail.com>"
+authors: ["Zach Shipko <zachshipko@gmail.com>"]
+homepage: "https://github.com/zshipko/resp"
+doc: "https://zshipko.github.io/resp/doc"
+license: "ISC"
+dev-repo: "https://github.com/zshipko/resp.git"
+bug-reports: "https://github.com/zshipko/resp/issues"
+tags: []
+
+available: [ ocaml-version >= "4.03.0"]
+
+depends:
+[
+    "dune" {build}
+    "resp"
+    "resp-client"
+    "resp-server"
+    "lwt"
+]
+
+depopts: []
+
+build:
+[
+    ["dune" "build" "-p" name]
+]
+
+build-test:
+[
+    ["dune" "runtest" "-p" name]
+]

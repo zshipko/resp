@@ -15,8 +15,13 @@ end)
 
 module Writer = Resp.Writer (struct
   module IO: Resp.IO with type 'a t = 'a Lwt.t = IO
+
   type oc = Lwt_io.output_channel
-  let write = Lwt_io.write
+
+  let write oc s =
+    let open IO in
+    Lwt_io.write oc s >>= fun () ->
+    Lwt_io.flush oc
 end)
 
 module Backend(Data: sig type data end) = struct

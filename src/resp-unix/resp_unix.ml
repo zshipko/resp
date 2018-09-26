@@ -5,15 +5,18 @@ module Reader = Resp.Reader(struct
   type ic = in_channel
 
   let read_char ic = input_char ic
-  let read_line ic = input_line ic
-  let read ic n = really_input_string ic n
+  let read_line ic =
+    let s = input_line ic in
+    String.sub s 0 (String.length s - 1)
+  let read ic n =
+    really_input_string ic n
 end)
 
 module Writer = Resp.Writer(struct
   module IO = IO
   type oc = out_channel
 
-  let write = output_string
+  let write oc s = output_string oc s; flush oc
 end)
 
 module Backend(Data: sig type data end) = struct

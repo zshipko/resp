@@ -306,6 +306,64 @@ module String_reader = Reader(String_input)
 module String_writer = Writer(String_output)
 module String = Make(Bulk.String(String_reader)(String_writer))
 
+let is_nil = function
+  | `Nil -> true
+  | _ -> false
+
+let to_value = function
+  | `Bulk (`Value v) -> Ok v
+  | _ -> Error `Invalid_value
+
+let to_value_exn x = to_value x |> unwrap
+
+let to_string = function
+  | `String s -> Ok s
+  | `Bulk (`String s) -> Ok s
+  | `Error e -> Ok e
+  | `Nil -> Ok "nil"
+  | `Integer i -> Ok (Int64.to_string i)
+  | _ -> Error `Invalid_value
+
+let to_string_exn x = to_string x |> unwrap
+
+let to_integer = function
+  | `Integer i -> Ok i
+  | `String s | `Bulk (`String s) ->
+      (try Ok (Int64.of_string s) with _ ->  Error `Invalid_value)
+  | _ -> Error `Invalid_value
+
+let to_integer_exn x = to_integer x |> unwrap
+
+let to_float = function
+  | `Integer i -> Ok (Int64.to_float i)
+  | `String s | `Bulk (`String s) ->
+      (try Ok (float_of_string s) with _ ->  Error `Invalid_value)
+  | _ -> Error `Invalid_value
+
+let to_float_exn x = to_float x |> unwrap
+
+let to_array f = function
+  | `Array a -> Ok (Array.map f a)
+  | _ -> Error `Invalid_value
+
+let to_array_exn f x = to_array f x |> unwrap
+
+let to_alist k v = function
+  | `Array a ->
+      let len = Array.length a in
+      if len mod 2 <> 0 then
+        Error `Invalid_value
+      else
+        let dest = ref [] in
+        Array.iteri (fun i x ->
+          if i < len - 1 then
+            dest := (k x, v a.(i + 1)) :: !dest
+        ) a;
+        Ok !dest
+  | _ -> Error `Invalid_value
+
+let to_alist_exn k v x = to_alist k v x |> unwrap
+
 
 (*---------------------------------------------------------------------------
    Copyright (c) 2018 Zach Shipko

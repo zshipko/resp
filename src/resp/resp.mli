@@ -131,6 +131,20 @@ module String: S
   and module Writer = String_writer
   and type bulk = string
 
+val is_nil: 'a t -> bool
+val to_value: 'a t -> ('a, error) result
+val to_value_exn: 'a t -> 'a
+val to_string: 'a t -> (string, error) result
+val to_string_exn: 'a t -> string
+val to_integer: 'a t -> (int64, error) result
+val to_integer_exn: 'a t -> int64
+val to_float: 'a t -> (float, error) result
+val to_float_exn: 'a t -> float
+val to_array: ('a t -> 'b) -> 'a t -> ('b array, error) result
+val to_array_exn: ('a t -> 'b) -> 'a t -> 'b array
+val to_alist: ('a t -> 'k) -> ('a t -> 'v) -> 'a t -> (('k * 'v) list, error) result
+val to_alist_exn: ('a t -> 'k) -> ('a t -> 'v) -> 'a t -> ('k * 'v) list
+
 (*---------------------------------------------------------------------------
    Copyright (c) 2018 Zach Shipko
 

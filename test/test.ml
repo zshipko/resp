@@ -24,7 +24,7 @@ module Server = Server.Make
 module Client = Client(Resp_lwt_unix.Bulk.String)
 
 let commands = [
-  "default", (fun _ht _client _cmd _nargs ->
+  "testing", (fun _ht _client _cmd _nargs ->
     Server.ok ());
 ]
 
@@ -35,7 +35,7 @@ let main =
       Conduit_lwt_unix.init ~src:"127.0.0.1" () >>= fun ctx ->
       let server = `TCP (`Port 1234) in
       let data = Hashtbl.create 8 in
-      let server = Server.create ~commands ~default:"default" (ctx, server) data in
+      let server = Server.create ~commands (ctx, server) data in
       Server.start server
   | n ->
       Lwt_unix.sleep 1.0 >>= fun () ->
@@ -43,13 +43,16 @@ let main =
       let addr = Ipaddr.of_string_exn "127.0.0.1" in
       let params = (ctx, `TCP (`IP addr, `Port 1234)) in
       Client.connect params >>= fun (ic, oc) ->
-      Client.run_s (ic, oc) [| "DEFAULT" |] >>= (function
+      Client.run_s (ic, oc) [| "testing" |] >>= (function
       | `String s -> print_endline s; if s = "OK" then Lwt.return 0 else Lwt.return 1
       | _ -> Lwt.return 1) >>= fun _code ->
-      Client.run_s (ic, oc) [| "DEFAULT" |] >>= (function
+      Client.run_s (ic, oc) [| "testing" |] >>= (function
       | `String s -> print_endline s; if s = "OK" then Lwt.return 0 else Lwt.return 1
       | `Error e -> print_endline e; Lwt.return 2
-      | _ -> Lwt.return 1) >|= fun code ->
+      | _ -> Lwt.return 1) >>= fun _code ->
+      Client.run_s (ic, oc) [| "BAD" |] >>= (function
+      | `Error e -> print_endline e; Lwt.return 0
+      | _ -> Lwt.return 1) >>= fun code ->
       Unix.kill n 9;
       exit code
 

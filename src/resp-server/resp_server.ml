@@ -132,10 +132,13 @@ module Make
                     | None -> IO.return ())
               | _ ->
                   discard_n client !argc >>= fun () ->
-                  Value.write (oc client) (`Error "ERR Invalid command") >>= fun () ->
+                  Value.write (oc client) (`Error "ERR Invalid command name") >>= fun () ->
                   handle t client true)
+        | Error e ->
+            Value.write (oc client) (`Error (Resp.string_of_error e)) >>= fun () ->
+            handle t client true
         | _ ->
-            Value.write (oc client) (`Error "ERR Invalid command") >>= fun () ->
+            Value.write (oc client) (`Error "ERR Invalid command format") >>= fun () ->
             handle t client true)
     (function
       | Resp.Exc exc ->

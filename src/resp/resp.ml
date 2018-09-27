@@ -218,8 +218,7 @@ module Writer (O: OUTPUT) = struct
           | n -> encode ?f oc a.(len - i) >>= fun () -> write (n - 1)
         in
         write_lexeme oc (`As len) >>= fun () ->
-        write len >>= fun () ->
-        write_sep oc
+        write len
 end
 
 module Make (Bulk: BULK) = struct

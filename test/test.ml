@@ -45,6 +45,10 @@ let main =
       Client.connect params >>= fun (ic, oc) ->
       Client.run_s (ic, oc) [| "DEFAULT" |] >>= (function
       | `String s -> print_endline s; if s = "OK" then Lwt.return 0 else Lwt.return 1
+      | _ -> Lwt.return 1) >>= fun _code ->
+      Client.run_s (ic, oc) [| "DEFAULT" |] >>= (function
+      | `String s -> print_endline s; if s = "OK" then Lwt.return 0 else Lwt.return 1
+      | `Error e -> print_endline e; Lwt.return 2
       | _ -> Lwt.return 1) >|= fun code ->
       Unix.kill n 9;
       exit code

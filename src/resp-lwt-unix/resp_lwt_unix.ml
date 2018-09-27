@@ -10,7 +10,7 @@ module Reader = Resp.Reader (struct
   type ic = Lwt_io.input_channel
   let read ic n = Lwt_io.read ic ~count:n
   let read_char = Lwt_io.read_char
-  let read_line = Lwt_io.read_line
+  let read_line ic = Lwt_io.read_line ic
 end)
 
 module Writer = Resp.Writer (struct

@@ -9,6 +9,7 @@ module type S = sig
   val write: oc -> bulk Resp.t -> unit IO.t
   val run_s: ic * oc -> string array -> Resp.lexeme IO.t
   val run: ic * oc -> bulk Resp.t array -> Resp.lexeme IO.t
+  val decode: ic -> Resp.lexeme -> bulk Resp.t IO.t
 end
 
 module type CLIENT = sig

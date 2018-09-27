@@ -9,6 +9,7 @@ module type S = sig
   val write: oc -> bulk Resp.t -> unit IO.t
   val run_s: ic * oc -> string array -> Resp.lexeme IO.t
   val run: ic * oc -> bulk Resp.t array -> Resp.lexeme IO.t
+  val decode: ic -> Resp.lexeme -> bulk Resp.t IO.t
 end
 
 module type CLIENT = sig
@@ -34,6 +35,9 @@ module Make
 
   let read ic = S.read ic
   let write oc = S.write oc
+
+  let decode ic =
+    S.Reader.decode ?f:decoder ic
 
   let run_s (ic, oc) cmd =
     let cmd = Array.map (fun s -> `Bulk (`String s)) cmd in

@@ -18,7 +18,7 @@ depends:
     "resp"
     "resp-client"
     "resp-server"
-    "lwt"
+    "conduit-lwt-unix"
 ]
 
 depopts: []

@@ -96,10 +96,6 @@ module Backend(Data: sig type data end) = struct
   type oc = Conduit_mirage.Flow.flow
 
   type server = Conduit_mirage.conduit * Conduit_mirage.server
-  type client = buffer * Conduit_mirage.Flow.flow
-
-  let ic (r, _) = r
-  let oc (_, w) = w
 
   let run (ctx, server) fn =
     Conduit_mirage.listen ctx server (fun flow ->

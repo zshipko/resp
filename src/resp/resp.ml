@@ -77,7 +77,7 @@ end
 module type READER = sig
   include INPUT
   val discard_sep: ic -> unit IO.t
-  val next: ic -> (lexeme, error) result IO.t
+  val read_lexeme: ic -> (lexeme, error) result IO.t
   val decode: ?f:(ic -> int -> 'a IO.t) -> ic -> lexeme -> 'a t IO.t
 end
 
@@ -115,7 +115,7 @@ module Reader (I: INPUT) = struct
     I.read_char ic >>= fun _ ->
     I.read_char ic >>= fun _ -> IO.return ()
 
-  let next ic: (lexeme, error) result IO.t  =
+  let read_lexeme ic: (lexeme, error) result IO.t  =
     I.read_char ic >>= function
     | ':' ->
         I.read_line ic >>= fun i ->
@@ -156,7 +156,7 @@ module Reader (I: INPUT) = struct
           | 0 -> IO.return ()
           | n ->
             begin
-              next ic >>= function
+              read_lexeme ic >>= function
               | Ok v ->
                 decode ?f ic v >>= fun x ->
                 arr.(len - n) <- x;
@@ -226,15 +226,18 @@ module Make (Bulk: BULK) = struct
 
   let ( >>= ) = IO.( >>= )
 
-  let read ic = Reader.next ic >>= function
-    | Ok l -> Reader.decode ?f:Bulk.decoder ic l
+  let decode = Reader.decode ?f:Bulk.decoder
+
+  let read ic = Reader.read_lexeme ic >>= function
+    | Ok l -> decode ic l
     | Error e -> raise (Exc e)
 
-  let read_s ic = Reader.next ic >>= function
+  let read_s ic = Reader.read_lexeme ic >>= function
     | Ok l -> Reader.decode ic l
     | Error e -> raise (Exc e)
 
-  let write oc = Writer.encode ?f:Bulk.encoder oc
+  let encode = Writer.encode ?f:Bulk.encoder
+  let write oc = encode oc
 end
 
 module Bulk = struct

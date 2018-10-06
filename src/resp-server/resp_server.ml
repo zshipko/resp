@@ -9,10 +9,7 @@ module type SERVER = sig
   type oc
   type server
   type data
-  type client
-  val ic: client -> ic
-  val oc: client -> oc
-  val run: server -> (client -> unit IO.t) -> unit IO.t
+  val run: server -> (ic * oc -> unit IO.t) -> unit IO.t
 end
 
 module Auth = struct
@@ -39,17 +36,23 @@ module type S = sig
   module Value: Resp.S with module IO = IO and type Reader.ic = ic and type Writer.oc = oc
   module Auth: AUTH
 
+  type client = ic * oc
+
   type command =
     data ->
     client ->
     string ->
     int ->
-    Value.bulk Resp.t option IO.t
+    unit IO.t
 
   type t
-  val ok: unit -> Value.bulk Resp.t option IO.t
-  val error: string -> Value.bulk Resp.t option IO.t
-  val invalid_arguments: unit -> Value.bulk Resp.t option IO.t
+
+  val discard_n: client -> int -> unit IO.t
+  val ok: client -> unit IO.t
+  val error: client -> string -> unit IO.t
+  val invalid_arguments: client -> unit IO.t
+  val send: client -> Value.bulk Resp.t -> unit IO.t
+  val recv: client -> Value.bulk Resp.t IO.t
   val create: ?auth:Auth.t -> ?commands:(string * command) list -> ?default:string -> server -> data -> t
   val start: t -> unit IO.t
 end
@@ -66,12 +69,14 @@ module Make
 
   let ( >>= ) = IO.( >>= )
 
+  type client = ic * oc
+
   type command =
     data ->
     client ->
     string ->
     int ->
-    Value.bulk Resp.t option IO.t
+    unit IO.t
 
   type t = {
     server: server;
@@ -81,9 +86,15 @@ module Make
     default:  string;
   }
 
-  let ok () = IO.return (Some (`String "OK"))
-  let error msg = IO.return (Some (`Error (Printf.sprintf "ERR %s" msg)))
-  let invalid_arguments () = error "Invalid arguments"
+  let ok (_, oc) = Value.write oc (`String "OK")
+  let error (_, oc) msg = Value.write oc (`Error (Printf.sprintf "ERR %s" msg))
+  let invalid_arguments client = error client "Invalid arguments"
+
+  let send (_, oc) x =
+    Value.write oc x
+
+  let recv (ic, _) =
+    Value.read ic
 
   let hashtbl_of_list l =
     let ht = Hashtbl.create (List.length l) in
@@ -110,7 +121,7 @@ module Make
 
   let rec discard_n client n =
     if n > 0 then
-      Value.read (ic client) >>= fun _ ->
+      Value.read (fst client) >>= fun _ ->
       discard_n client (n - 1)
     else
       IO.return ()
@@ -121,48 +132,53 @@ module Make
       if not authenticated then
         handle_not_authenticated t client
       else
-      Value.Reader.next (ic client) >>= function
+      Value.Reader.read_lexeme (fst client) >>= function
         | Ok (`As n) ->
             argc := n - 1;
-            (Value.read_s (ic client) >>= function
+            (Value.read_s (fst client) >>= function
               | `String s | `Bulk (`String s) ->
                   let s = String.lowercase_ascii s in
-                  let f = try Hashtbl.find t.commands s with Not_found -> Hashtbl.find t.commands t.default in
-                  f t.data client s !argc >>= (function
-                    | Some x -> Value.write (oc client) x >>= fun () -> handle t client true
-                    | None -> IO.return ())
+                  let f =
+                    try
+                      Hashtbl.find t.commands s
+                    with Not_found ->
+                      Hashtbl.find t.commands t.default
+                  in
+                  f t.data client s !argc >>= fun () ->
+                  handle t client true
               | _ ->
                   discard_n client !argc >>= fun () ->
-                  Value.write (oc client) (`Error "ERR Invalid command name") >>= fun () ->
+                  Value.write (snd client) (`Error "ERR Invalid command name") >>= fun () ->
                   handle t client true)
         | Error e ->
-            Value.write (oc client) (`Error (Resp.string_of_error e)) >>= fun () ->
+            Value.write (snd client) (`Error (Resp.string_of_error e)) >>= fun () ->
             handle t client true
         | _ ->
-            Value.write (oc client) (`Error "ERR Invalid command format") >>= fun () ->
+            Value.write (snd client) (`Error "ERR Invalid command format") >>= fun () ->
             handle t client true)
     (function
       | Resp.Exc exc ->
-          Value.write (oc client) (`Error ("ERR " ^ Resp.string_of_error exc)) >>= fun () ->
+          Value.write (snd client) (`Error ("ERR " ^ Resp.string_of_error exc)) >>= fun () ->
           handle t client true
       | Not_found ->
           discard_n client !argc >>= fun () ->
-          Value.write (oc client) (`Error "ERR Command not found") >>= fun () ->
+          Value.write (snd client) (`Error "ERR Command not found") >>= fun () ->
           handle t client true
-      | exc -> raise exc)
+      | exc ->
+          raise exc)
 
   and handle_not_authenticated t client =
-    Value.read_s (ic client) >>= function
+    Value.read_s (fst client) >>= function
     | `Array arr ->
       let cmd, args = split_command_s arr in
       (match cmd, args with
       | "auth", args ->
           if check_auth t.auth args then
-            Value.write (oc client) (`String "OK") >>= fun () -> handle t client true
+            Value.write (snd client) (`String "OK") >>= fun () -> handle t client true
           else
-            Value.write (oc client) (`Error "ERR Authentication required") >>= fun () -> handle t client false
-      | _, _ -> Value.write (oc client) (`Error "ERR Authentication required") >>= fun () -> handle t client false)
-    | _ -> Value.write (oc client) (`Error "ERR Authentication required") >>= fun () -> handle t client false
+            Value.write (snd client) (`Error "ERR Authentication required") >>= fun () -> handle t client false
+      | _, _ -> Value.write (snd client) (`Error "ERR Authentication required") >>= fun () -> handle t client false)
+    | _ -> Value.write (snd client) (`Error "ERR Authentication required") >>= fun () -> handle t client false
 
   let start t =
     run t.server (fun client ->

@@ -24,8 +24,26 @@ module Server = Server.Make
 module Client = Client(Resp_lwt_unix.Bulk.String)
 
 let commands = [
-  "testing", (fun _ht _client _cmd _nargs ->
-    Server.ok ());
+  "set", (fun ht client _cmd nargs ->
+    if nargs <> 2 then
+      Server.invalid_arguments client
+    else
+      Server.recv client >>= fun key ->
+      Server.recv client >>= fun value ->
+      Hashtbl.replace ht (Resp.to_string_exn key) (Resp.to_string_exn value);
+      Server.ok client
+  );
+  "get", (fun ht client _cmd nargs ->
+    if nargs <> 1 then
+      Server.invalid_arguments client
+    else
+      Server.recv client >>= fun key ->
+      try
+        let value = Hashtbl.find ht (Resp.to_string_exn key) in
+        Server.send client (`Bulk (`String value))
+      with Not_found ->
+        Server.error client "Not found"
+  );
 ]
 
 let main =
@@ -43,17 +61,18 @@ let main =
       let addr = Ipaddr.of_string_exn "127.0.0.1" in
       let params = (ctx, `TCP (`IP addr, `Port 1234)) in
       Client.connect params >>= fun (ic, oc) ->
-      Client.run_s (ic, oc) [| "testing" |] >>= (function
+      Client.run_s (ic, oc) [| "set"; "abc"; "123" |] >>= (function
       | `String s -> print_endline s; if s = "OK" then Lwt.return 0 else Lwt.return 1
       | _ -> Lwt.return 1) >>= fun _code ->
-      Client.run_s (ic, oc) [| "testing" |] >>= (function
-      | `String s -> print_endline s; if s = "OK" then Lwt.return 0 else Lwt.return 1
-      | `Error e -> print_endline e; Lwt.return 2
-      | _ -> Lwt.return 1) >>= fun _code ->
-      Client.run_s (ic, oc) [| "BAD" |] >>= (function
+      Client.run_s (ic, oc) [| "BAD"; "x" |] >>= (function
       | `Error e -> print_endline e; Lwt.return 0
+      | _ -> Lwt.return 1) >>= fun _code ->
+        Client.run_s (ic, oc) [| "get"; "abc" |] >>= Client.decode ic >>= (function
+      | `Bulk (`String s) ->
+          print_endline s; if s = "123" then Lwt.return 0 else Lwt.return 1
+      | `Error e -> print_endline e; Lwt.return 2
       | _ -> Lwt.return 1) >>= fun code ->
-      Unix.kill n 9;
+      Unix.kill n Sys.sigint;
       exit code
 
 let () = Lwt_main.run main

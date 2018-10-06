@@ -5,11 +5,16 @@ module Reader = Resp.Reader(struct
   type ic = in_channel
 
   let read_char ic = input_char ic
-  let read_line ic =
-    let s = input_line ic in
-    String.sub s 0 (String.length s - 1)
   let read ic n =
     really_input_string ic n
+  let read_line t =
+    let rec aux output =
+      match read t 1 with
+      | "\n" -> output
+      | "\r" -> aux output
+      | c -> aux (output ^ c)
+    in
+    aux ""
 end)
 
 module Writer = Resp.Writer(struct
@@ -25,12 +30,8 @@ module Backend(Data: sig type data end) = struct
   type ic = in_channel
   type oc = out_channel
 
-  type client = ic * oc
   type data = Data.data
   type server = Unix.sockaddr
-
-  let ic (ic, _) = ic
-  let oc (_, oc) = oc
 
   let run server fn =
     Unix.establish_server (fun ic oc -> fn (ic, oc)) server

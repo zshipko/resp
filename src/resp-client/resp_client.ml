@@ -42,9 +42,9 @@ module Make
   let run_s (ic, oc) cmd =
     let cmd = Array.map (fun s -> `Bulk (`String s)) cmd in
     write oc (`Array cmd) >>= fun () ->
-    S.Reader.next ic >>= fun x -> Resp.unwrap x |> IO.return
+    S.Reader.read_lexeme ic >>= fun x -> Resp.unwrap x |> IO.return
 
   let run (ic, oc) cmd =
     write oc (`Array cmd) >>= fun () ->
-    S.Reader.next ic >>= fun x -> Resp.unwrap x |> IO.return
+    S.Reader.read_lexeme ic >>= fun x -> Resp.unwrap x |> IO.return
 end

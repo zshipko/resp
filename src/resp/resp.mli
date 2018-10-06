@@ -70,7 +70,7 @@ end
 module type READER = sig
   include INPUT
   val discard_sep: ic -> unit IO.t
-  val next: ic -> (lexeme, error) result IO.t
+  val read_lexeme: ic -> (lexeme, error) result IO.t
   val decode: ?f:(ic -> int -> 'a IO.t) -> ic -> lexeme -> 'a t IO.t
 end
 

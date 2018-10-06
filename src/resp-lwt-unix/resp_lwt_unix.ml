@@ -33,15 +33,14 @@ module Backend(Data: sig type data end) = struct
   type oc = Lwt_io.output_channel
 
   type server = Conduit_lwt_unix.ctx * Conduit_lwt_unix.server
-  type client = ic * oc
-
-  let ic (ic, _) = ic
-  let oc (_, oc) = oc
 
   let run server fn =
     let mode = snd server in
     let ctx = fst server in
-    Conduit_lwt_unix.serve ~ctx ~mode (fun _ ic oc -> fn (ic, oc))
+    let on_exn exc =
+      Printexc.to_string exc |> print_endline
+    in
+    Conduit_lwt_unix.serve ~on_exn ~ctx ~mode (fun _ ic oc -> fn (ic, oc))
 end
 
 module Client_backend = struct

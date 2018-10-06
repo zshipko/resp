@@ -99,8 +99,9 @@ module Make
   let hashtbl_of_list l =
     let ht = Hashtbl.create (List.length l) in
     List.iter (fun (k, v) ->
-      Hashtbl.replace ht k v) l;
+      Hashtbl.replace ht (String.lowercase_ascii k) v) l;
     ht
+
   let create ?auth ?(commands = []) ?(default = "default") server data =
     let commands = hashtbl_of_list commands in
     {server; data; auth; commands; default}

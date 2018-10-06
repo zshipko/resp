@@ -5,11 +5,12 @@ module type S = sig
   type oc
   type params
   val connect: params -> (ic * oc) IO.t
-  val read: ic -> bulk Resp.t IO.t
-  val write: oc -> bulk Resp.t -> unit IO.t
+  val read: ic * oc -> bulk Resp.t IO.t
+  val write: ic * oc -> bulk Resp.t -> unit IO.t
   val run_s: ic * oc -> string array -> Resp.lexeme IO.t
   val run: ic * oc -> bulk Resp.t array -> Resp.lexeme IO.t
-  val decode: ic -> Resp.lexeme -> bulk Resp.t IO.t
+  val decode: ic * oc -> Resp.lexeme -> bulk Resp.t IO.t
+  val read_lexeme: ic * oc -> Resp.lexeme IO.t
 end
 
 module type CLIENT = sig
@@ -33,18 +34,21 @@ module Make
   type params = Client.params
   let connect = Client.connect
 
-  let read ic = S.read ic
-  let write oc = S.write oc
+  let read (ic, _) = S.read ic
+  let write (_, oc) = S.write oc
 
-  let decode ic =
+  let decode (ic, _) =
     S.Reader.decode ?f:decoder ic
 
-  let run_s (ic, oc) cmd =
-    let cmd = Array.map (fun s -> `Bulk (`String s)) cmd in
-    write oc (`Array cmd) >>= fun () ->
+  let read_lexeme (ic, _) =
     S.Reader.read_lexeme ic >>= fun x -> Resp.unwrap x |> IO.return
 
-  let run (ic, oc) cmd =
-    write oc (`Array cmd) >>= fun () ->
-    S.Reader.read_lexeme ic >>= fun x -> Resp.unwrap x |> IO.return
+  let run_s client cmd =
+    let cmd = Array.map (fun s -> `Bulk (`String s)) cmd in
+    write client (`Array cmd) >>= fun () ->
+    read_lexeme client
+
+  let run client cmd =
+    write client (`Array cmd) >>= fun () ->
+    read_lexeme client
 end

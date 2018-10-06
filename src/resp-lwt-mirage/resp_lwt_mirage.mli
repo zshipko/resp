@@ -32,6 +32,7 @@ module Server: sig
     and type server = Conduit_mirage.conduit * Conduit_mirage.server
     and type client = Reader.ic * Writer.oc
     and type data = Data.data
+    and module Value = S
 
   module Default : Resp_server.S
     with module IO = IO
@@ -41,6 +42,7 @@ module Server: sig
     and type server = Conduit_mirage.conduit * Conduit_mirage.server
     and type client = Reader.ic * Writer.oc
     and type data = unit
+    and module Value = Bulk.String
 end
 
 module Client(S: Resp.S with module IO = IO and module Reader = Reader and module Writer = Writer): Resp_client.S
@@ -48,3 +50,4 @@ module Client(S: Resp.S with module IO = IO and module Reader = Reader and modul
   and type ic = Reader.ic
   and type oc = Writer.oc
   and type params = Conduit_mirage.conduit * Conduit_mirage.client
+  and type bulk = S.bulk

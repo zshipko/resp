@@ -164,6 +164,7 @@ module Make
           discard_n client !argc >>= fun () ->
           Value.write (snd client) (`Error "ERR Command not found") >>= fun () ->
           handle t client true
+      | End_of_file -> IO.return ()
       | exc ->
           raise exc)
 

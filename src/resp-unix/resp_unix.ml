@@ -7,9 +7,10 @@ module Reader = Resp.Reader(struct
   let read_char ic = input_char ic
   let read ic n =
     really_input_string ic n
+
   let read_line t =
     let rec aux output =
-      match read t 1 with
+      match try read t 1 with End_of_file -> "\n" with
       | "\n" -> output
       | "\r" -> aux output
       | c -> aux (output ^ c)

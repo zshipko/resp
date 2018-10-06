@@ -5,11 +5,12 @@ module type S = sig
   type oc
   type params
   val connect: params -> (ic * oc) IO.t
-  val read: ic -> bulk Resp.t IO.t
-  val write: oc -> bulk Resp.t -> unit IO.t
+  val read: ic * oc -> bulk Resp.t IO.t
+  val write: ic * oc -> bulk Resp.t -> unit IO.t
   val run_s: ic * oc -> string array -> Resp.lexeme IO.t
   val run: ic * oc -> bulk Resp.t array -> Resp.lexeme IO.t
-  val decode: ic -> Resp.lexeme -> bulk Resp.t IO.t
+  val decode: ic * oc -> Resp.lexeme -> bulk Resp.t IO.t
+  val read_lexeme: ic * oc -> Resp.lexeme IO.t
 end
 
 module type CLIENT = sig
@@ -28,3 +29,4 @@ module Make
       and type ic = Client.ic
       and type oc = Client.oc
       and type params = Client.params
+      and type bulk = S.bulk

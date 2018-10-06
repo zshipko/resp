@@ -16,7 +16,7 @@ depends:
     "resp"
     "resp-client"
     "resp-server"
-    "lwt"
+    "mirage-conduit"
 ]
 
 depopts: []

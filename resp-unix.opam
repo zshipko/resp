@@ -1,4 +1,4 @@
-opam-version: "1.2"
+opam-version: "2.0"
 maintainer: "Zach Shipko <zachshipko@gmail.com>"
 authors: ["Zach Shipko <zachshipko@gmail.com>"]
 homepage: "https://github.com/zshipko/resp"
@@ -8,10 +8,9 @@ dev-repo: "https://github.com/zshipko/resp.git"
 bug-reports: "https://github.com/zshipko/resp/issues"
 tags: []
 
-available: [ ocaml-version >= "4.03.0"]
-
 depends:
 [
+    "ocaml" {>= "4.03.0"}
     "dune" {build}
     "alcotest" {test}
     "resp"
@@ -24,9 +23,5 @@ depopts: []
 build:
 [
     ["dune" "build" "-p" name]
-]
-
-build-test:
-[
-    ["dune" "runtest" "-p" name]
+    ["dune" "runtest" "-p" name] {with-test}
 ]

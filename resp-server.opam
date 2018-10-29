@@ -21,6 +21,5 @@ depopts: []
 build:
 [
     ["dune" "build" "-p" name]
-    ["dune" "runtest" "-p" name] {with-test}
 ]
 

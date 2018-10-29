@@ -140,9 +140,13 @@ module Server = struct
     Make (Resp_server.Auth.String) (struct type data = unit end) (Bulk.String)
 end
 
-module Client
-    (S : Resp.S
-         with module IO = IO
-          and module Reader = Reader
-          and module Writer = Writer) =
-  Resp_client.Make (Client_backend) (S)
+module Client = struct
+  module Make
+      (S : Resp.S
+           with module IO = IO
+            and module Reader = Reader
+            and module Writer = Writer) =
+    Resp_client.Make (Client_backend) (S)
+
+  module Default = Make (Bulk.String)
+end

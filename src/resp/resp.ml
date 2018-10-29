@@ -279,7 +279,7 @@ module Bulk = struct
     let encoder =
       Some (fun oc bulk -> (String.length bulk, fun () -> Writer.write oc bulk))
 
-    let decoder = None
+    let decoder = Some Reader.read
   end
 end
 

@@ -4,11 +4,9 @@ authors: ["Zach Shipko <zachshipko@gmail.com>"]
 homepage: "https://github.com/zshipko/resp"
 doc: "https://zshipko.github.io/resp/doc"
 license: "ISC"
-dev-repo: "https://github.com/zshipko/resp.git"
+dev-repo: "git+https://github.com/zshipko/resp.git"
 bug-reports: "https://github.com/zshipko/resp/issues"
 tags: []
-
-available: [ ocaml-version >= "4.03.0"]
 
 depends:
 [

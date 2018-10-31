@@ -371,6 +371,19 @@ let to_string = function
 
 let to_string_exn x = to_string x |> unwrap
 
+let to_string_or_value x =
+  match to_string x with
+  | Ok s ->
+    Ok (`String s)
+  | Error _ -> (
+    match to_value x with
+    | Ok v ->
+      Ok (`Value v)
+    | Error e ->
+      Error e )
+
+let to_string_or_value_exn x = to_string_or_value x |> unwrap
+
 let to_integer = function
   | `Integer i ->
     Ok i

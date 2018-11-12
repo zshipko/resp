@@ -27,3 +27,7 @@ build:
     ["dune" "build" "-p" name]
     ["dune" "runtest" "-p" name] {with-test}
 ]
+
+synopsis: """
+Redis serialization protocol tools for Lwt and Unix
+"""

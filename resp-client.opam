@@ -21,3 +21,7 @@ build:
 [
     ["dune" "build" "-p" name]
 ]
+
+synopsis: """
+Redis serialization protocol client
+"""

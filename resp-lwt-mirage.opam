@@ -24,3 +24,7 @@ build:
 [
     ["dune" "build" "-p" name]
 ]
+
+synopsis: """
+Redis serialization protocol tools for Lwt and Mirage
+"""

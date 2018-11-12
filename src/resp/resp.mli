@@ -100,6 +100,7 @@ module type S = sig
   include BULK
 
   val write : Writer.oc -> bulk t -> unit IO.t
+  val write_s : Writer.oc -> bulk t -> unit IO.t
   val read : Reader.ic -> bulk t IO.t
   val read_s : Reader.ic -> bulk t IO.t
 end

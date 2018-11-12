@@ -113,6 +113,7 @@ module type S = sig
   include BULK
 
   val write : Writer.oc -> bulk t -> unit IO.t
+  val write_s : Writer.oc -> bulk t -> unit IO.t
   val read : Reader.ic -> bulk t IO.t
   val read_s : Reader.ic -> bulk t IO.t
 end
@@ -246,6 +247,7 @@ module Make (Bulk : BULK) = struct
 
   let ( >>= ) = IO.( >>= )
   let decode = Reader.decode ?f:Bulk.decoder
+  let decode_s ic = Reader.decode ?f:None ic
 
   let read ic =
     Reader.read_lexeme ic
@@ -259,12 +261,14 @@ module Make (Bulk : BULK) = struct
     Reader.read_lexeme ic
     >>= function
     | Ok l ->
-      Reader.decode ic l
+      decode_s ic l
     | Error e ->
       raise (Exc e)
 
   let encode = Writer.encode ?f:Bulk.encoder
+  let encode_s oc = Writer.encode ?f:None oc
   let write oc = encode oc
+  let write_s oc x = encode_s oc x
 end
 
 module Bulk = struct

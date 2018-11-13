@@ -54,7 +54,7 @@ struct
 
   let run_s client cmd =
     let cmd = Array.map (fun s -> `Bulk (`String s)) cmd in
-    write client (`Array cmd) >>= fun () -> read_lexeme client
+    write_s client (`Array cmd) >>= fun () -> read_lexeme client
 
   let run client cmd =
     write client (`Array cmd) >>= fun () -> read_lexeme client

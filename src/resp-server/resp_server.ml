@@ -92,8 +92,11 @@ struct
     ; commands : (string, command) Hashtbl.t
     ; default : string }
 
-  let ok (_, oc) = Value.write oc (`String "OK")
-  let error (_, oc) msg = Value.write oc (`Error (Printf.sprintf "ERR %s" msg))
+  let ok (_, oc) = Value.write_s oc (`String "OK")
+
+  let error (_, oc) msg =
+    Value.write_s oc (`Error (Printf.sprintf "ERR %s" msg))
+
   let invalid_arguments client = error client "Invalid arguments"
   let send (_, oc) x = Value.write oc x
   let send_s (_, oc) x = Value.write_s oc x
@@ -129,7 +132,8 @@ struct
     , Array.map to_string (Array.sub arr 1 (Array.length arr - 1)) )
 
   let rec discard_n client n =
-    if n > 0 then Value.read (fst client) >>= fun _ -> discard_n client (n - 1)
+    if n > 0 then
+      Value.read_s (fst client) >>= fun _ -> discard_n client (n - 1)
     else IO.return ()
 
   let rec handle t client authenticated =
@@ -155,23 +159,22 @@ struct
             | _ ->
               discard_n client !argc
               >>= fun () ->
-              Value.write (snd client) (`Error "ERR Invalid command name")
+              error client "invalid commands name"
               >>= fun () -> handle t client true )
           | Error e ->
-            Value.write (snd client) (`Error (Resp.string_of_error e))
+            error client (Resp.string_of_error e)
             >>= fun () -> handle t client true
           | _ ->
-            Value.write (snd client) (`Error "ERR Invalid command format")
+            error client "invalid command format"
             >>= fun () -> handle t client true )
       (function
         | Resp.Exc exc ->
-          Value.write (snd client) (`Error ("ERR " ^ Resp.string_of_error exc))
+          error client (Resp.string_of_error exc)
           >>= fun () -> handle t client true
         | Not_found ->
           discard_n client !argc
           >>= fun () ->
-          Value.write (snd client) (`Error "ERR Command not found")
-          >>= fun () -> handle t client true
+          error client "command not found" >>= fun () -> handle t client true
         | End_of_file ->
           IO.return ()
         | exc ->
@@ -185,16 +188,15 @@ struct
       match (cmd, args) with
       | "auth", args ->
         if check_auth t.auth args then
-          Value.write (snd client) (`String "OK")
-          >>= fun () -> handle t client true
+          ok client >>= fun () -> handle t client true
         else
-          Value.write (snd client) (`Error "ERR Authentication required")
+          error client "authentication required"
           >>= fun () -> handle t client false
       | _, _ ->
-        Value.write (snd client) (`Error "ERR Authentication required")
+        error client "authentication required"
         >>= fun () -> handle t client false )
     | _ ->
-      Value.write (snd client) (`Error "ERR Authentication required")
+      error client "authentication required"
       >>= fun () -> handle t client false
 
   let start t = run t.server (fun client -> handle t client (t.auth = None))

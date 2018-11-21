@@ -178,6 +178,9 @@ struct
           discard_n client !argc
           >>= fun () ->
           error client "command not found" >>= fun () -> handle t client true
+        | Failure msg
+        | Invalid_argument msg ->
+          error client msg
         | End_of_file ->
           IO.return ()
         | exc ->

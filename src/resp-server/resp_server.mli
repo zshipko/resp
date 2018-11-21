@@ -33,6 +33,7 @@ module type S = sig
   type t
 
   val discard_n : client -> int -> unit IO.t
+  val finish : client -> nargs:int -> int -> unit IO.t
   val ok : client -> unit IO.t
   val error : client -> string -> unit IO.t
   val invalid_arguments : client -> unit IO.t

@@ -49,6 +49,7 @@ module type S = sig
   type t
 
   val discard_n : client -> int -> unit IO.t
+  val finish : client -> nargs:int -> int -> unit IO.t
   val ok : client -> unit IO.t
   val error : client -> string -> unit IO.t
   val invalid_arguments : client -> unit IO.t
@@ -135,6 +136,8 @@ struct
     if n > 0 then
       Value.read_s (fst client) >>= fun _ -> discard_n client (n - 1)
     else IO.return ()
+
+  let finish client ~nargs used = discard_n client (nargs - used)
 
   let rec handle t client authenticated =
     let argc = ref 0 in

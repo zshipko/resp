@@ -123,7 +123,12 @@ module Client_backend = struct
 end
 
 module Bulk_string = Resp.Bulk.String (Reader) (Writer)
-module Bulk = struct module String = Resp.Make (Bulk_string) end
+module Bulk_json = Resp.Bulk.Json (Reader) (Writer)
+
+module Bulk = struct
+  module String = Resp.Make (Bulk_string)
+  module Json = Resp.Make (Bulk_json)
+end
 
 module Server = struct
   module Make

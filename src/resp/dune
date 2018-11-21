@@ -1,3 +1,4 @@
 (library
     (name resp)
-    (public_name resp))
+    (public_name resp)
+    (libraries ezjsonm))

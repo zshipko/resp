@@ -140,6 +140,13 @@ module Bulk : sig
      and module Reader = R
      and module Writer = W
      and type bulk = string
+
+  module Json (R : READER) (W : WRITER with module IO = R.IO) :
+    BULK
+    with module IO = R.IO
+     and module Reader = R
+     and module Writer = W
+     and type bulk = Ezjsonm.t
 end
 
 module String :

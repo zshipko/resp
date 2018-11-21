@@ -272,6 +272,28 @@ module Make (Bulk : BULK) = struct
 end
 
 module Bulk = struct
+  module Json (Reader : READER) (Writer : WRITER with module IO = Reader.IO) =
+  struct
+    module IO = Reader.IO
+    module Reader = Reader
+    module Writer = Writer
+
+    type bulk = Ezjsonm.t
+
+    (* TODO: make encoder/decoder streaming *)
+    let encoder =
+      Some
+        (fun oc bulk ->
+          let s = Ezjsonm.to_string bulk in
+          (String.length s, fun () -> Writer.write oc s) )
+
+    let decoder =
+      Some
+        (fun ic len ->
+          let open IO in
+          Reader.read ic len >>= fun s -> Ezjsonm.from_string s |> return )
+  end
+
   module String (Reader : READER) (Writer : WRITER with module IO = Reader.IO) =
   struct
     module IO = Reader.IO

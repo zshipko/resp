@@ -35,6 +35,8 @@ module Make
           and type Writer.oc = Client.oc) :
   S
   with module IO = Client.IO
+   and module Reader = S.Reader
+   and module Writer = S.Writer
    and type ic = Client.ic
    and type oc = Client.oc
    and type params = Client.params

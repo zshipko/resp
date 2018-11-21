@@ -22,6 +22,13 @@ module Bulk : sig
      and type bulk = string
      and module Reader = Reader
      and module Writer = Writer
+
+  module Json :
+    Resp.S
+    with module IO = IO
+     and type bulk = Ezjsonm.t
+     and module Reader = Reader
+     and module Writer = Writer
 end
 
 module Server : sig

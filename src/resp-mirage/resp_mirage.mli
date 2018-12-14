@@ -38,6 +38,5 @@ end
 
 module Client :
   Resp_client.S
-  with type ic = Reader.ic
-   and type oc = Writer.oc
-   and type params = Conduit_mirage.conduit * Conduit_mirage.client
+  with type params = Conduit_mirage.conduit * Conduit_mirage.client
+   and type t = Reader.ic * Writer.oc

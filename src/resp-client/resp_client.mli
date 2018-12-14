@@ -1,17 +1,16 @@
 module type S = sig
   include Resp.S
 
-  type ic
-  type oc
+  type t
   type params
 
-  val connect : params -> (ic * oc) Lwt.t
-  val read : ic * oc -> Resp.t Lwt.t
-  val write : ic * oc -> Resp.t -> unit Lwt.t
-  val run : ic * oc -> Resp.t array -> Resp.t Lwt.t
-  val run_s : ic * oc -> string array -> Resp.t Lwt.t
-  val decode : ic * oc -> Resp.lexeme -> Resp.t Lwt.t
-  val read_lexeme : ic * oc -> Resp.lexeme Lwt.t
+  val connect : params -> t Lwt.t
+  val read : t -> Resp.t Lwt.t
+  val write : t -> Resp.t -> unit Lwt.t
+  val run : t -> Resp.t array -> Resp.t Lwt.t
+  val run_s : t -> string array -> Resp.t Lwt.t
+  val decode : t -> Resp.lexeme -> Resp.t Lwt.t
+  val read_lexeme : t -> Resp.lexeme Lwt.t
 end
 
 module type CLIENT = sig
@@ -28,6 +27,5 @@ module Make
   S
   with module Reader = S.Reader
    and module Writer = S.Writer
-   and type ic = Client.ic
-   and type oc = Client.oc
+   and type t = Client.ic * Client.oc
    and type params = Client.params

@@ -34,6 +34,5 @@ end
 
 module Client :
   Resp_client.S
-  with type ic = Reader.ic
-   and type oc = Writer.oc
-   and type params = Conduit_lwt_unix.ctx * Conduit_lwt_unix.client
+  with type params = Conduit_lwt_unix.ctx * Conduit_lwt_unix.client
+   and type t = Reader.ic * Writer.oc

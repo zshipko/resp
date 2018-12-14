@@ -4,14 +4,12 @@ script: bash -ex .travis-opam.sh
 env:
   global:
     - ALCOTEST_SHOW_ERRORS=1
-    - PINS="resp.dev:. resp-server.dev:. resp-client.dev:. resp-lwt-unix.dev:. resp-lwt-mirage.dev:. resp-unix.dev:."
+    - PINS="resp.dev:. resp-server.dev:. resp-client.dev:. resp-unix.dev:. resp-mirage.dev:."
   matrix:
     - OCAML_VERSION=4.06 PACKAGE="resp.dev" TESTS=true
     - OCAML_VERSION=4.07 PACKAGE="resp.dev" TESTS=true
     - OCAML_VERSION=4.06 PACKAGE="resp-unix.dev" TESTS=true
     - OCAML_VERSION=4.07 PACKAGE="resp-unix.dev" TESTS=true
-    - OCAML_VERSION=4.06 PACKAGE="resp-lwt-unix.dev" TESTS=true
-    - OCAML_VERSION=4.07 PACKAGE="resp-lwt-unix.dev" TESTS=true
-    - OCAML_VERSION=4.06 PACKAGE="resp-lwt-mirage.dev" TESTS=false
-    - OCAML_VERSION=4.07 PACKAGE="resp-lwt-mirage.dev" TESTS=false
+    - OCAML_VERSION=4.06 PACKAGE="resp-mirage.dev" TESTS=false
+    - OCAML_VERSION=4.07 PACKAGE="resp-mirage.dev" TESTS=false
 

@@ -1,5 +1,5 @@
 module Make (Server : Resp_server.S) = struct
-  open Server.IO
+  open Lwt.Infix
 
   let commands =
     [ ( "set"
@@ -10,8 +10,8 @@ module Make (Server : Resp_server.S) = struct
             >>= fun key ->
             Server.recv client
             >>= fun value ->
-            Hashtbl.replace ht (Resp.to_value_exn key)
-              (Resp.to_value_exn value);
+            Hashtbl.replace ht (Resp.to_string_exn key)
+              (Resp.to_string_exn value);
             Server.ok client )
     ; ( "get"
       , fun ht client _cmd nargs ->
@@ -20,7 +20,7 @@ module Make (Server : Resp_server.S) = struct
             Server.recv client
             >>= fun key ->
             try
-              let value = Hashtbl.find ht (Resp.to_value_exn key) in
-              Server.send client (`Bulk (`Value value))
+              let value = Hashtbl.find ht (Resp.to_string_exn key) in
+              Server.send client (`Bulk value)
             with Not_found -> Server.error client "Not found" ) ]
 end

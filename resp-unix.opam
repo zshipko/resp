@@ -13,9 +13,11 @@ depends:
     "ocaml" {>= "4.03.0"}
     "dune" {build}
     "alcotest" {with-test}
+    "alcotest-lwt" {with-test}
     "resp"
     "resp-client"
     "resp-server"
+    "conduit-lwt-unix"
 ]
 
 depopts: []
@@ -27,5 +29,5 @@ build:
 ]
 
 synopsis: """
-Redis serialization protocol tools for Unix
+Redis serialization protocol tools for Lwt and Unix
 """

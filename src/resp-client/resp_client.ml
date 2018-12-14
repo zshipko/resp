@@ -5,37 +5,29 @@ module type S = sig
   type oc
   type params
 
-  val connect : params -> (ic * oc) IO.t
-  val read : ic * oc -> bulk Resp.t IO.t
-  val read_s : ic * oc -> bulk Resp.t IO.t
-  val write : ic * oc -> bulk Resp.t -> unit IO.t
-  val write_s : ic * oc -> bulk Resp.t -> unit IO.t
-  val run_s : ic * oc -> string array -> Resp.lexeme IO.t
-  val run : ic * oc -> bulk Resp.t array -> Resp.lexeme IO.t
-  val decode : ic * oc -> Resp.lexeme -> bulk Resp.t IO.t
-  val decode_s : ic * oc -> Resp.lexeme -> bulk Resp.t IO.t
-  val read_lexeme : ic * oc -> Resp.lexeme IO.t
+  val connect : params -> (ic * oc) Lwt.t
+  val read : ic * oc -> Resp.t Lwt.t
+  val write : ic * oc -> Resp.t -> unit Lwt.t
+  val run : ic * oc -> Resp.t array -> Resp.t Lwt.t
+  val run_s : ic * oc -> string array -> Resp.t Lwt.t
+  val decode : ic * oc -> Resp.lexeme -> Resp.t Lwt.t
+  val read_lexeme : ic * oc -> Resp.lexeme Lwt.t
 end
 
 module type CLIENT = sig
-  module IO : Resp.IO
-
   type ic
   type oc
   type params
 
-  val connect : params -> (ic * oc) IO.t
+  val connect : params -> (ic * oc) Lwt.t
 end
 
 module Make
     (Client : CLIENT)
-    (S : Resp.S
-         with module IO = Client.IO
-          and type Reader.ic = Client.ic
-          and type Writer.oc = Client.oc) =
+    (S : Resp.S with type Reader.ic = Client.ic and type Writer.oc = Client.oc) =
 struct
   include S
-  open IO
+  open Lwt
 
   type ic = Client.ic
   type oc = Client.oc
@@ -43,19 +35,15 @@ struct
 
   let connect = Client.connect
   let read (ic, _) = S.read ic
-  let read_s (ic, _) = S.read_s ic
   let write (_, oc) = S.write oc
-  let write_s (_, oc) = S.write_s oc
-  let decode (ic, _) = S.Reader.decode ?f:decoder ic
-  let decode_s (ic, _) = S.Reader.decode ?f:None ic
+  let decode (ic, _) = S.Reader.decode ic
 
   let read_lexeme (ic, _) =
-    S.Reader.read_lexeme ic >>= fun x -> Resp.unwrap x |> IO.return
+    S.Reader.read_lexeme ic >>= fun x -> Resp.unwrap x |> Lwt.return
 
   let run_s client cmd =
-    let cmd = Array.map (fun s -> `Bulk (`String s)) cmd in
-    write_s client (`Array cmd) >>= fun () -> read_lexeme client
+    let cmd = Array.map (fun s -> `Bulk s) cmd in
+    write client (`Array cmd) >>= fun () -> read client
 
-  let run client cmd =
-    write client (`Array cmd) >>= fun () -> read_lexeme client
+  let run client cmd = write client (`Array cmd) >>= fun () -> read client
 end

@@ -1,88 +1,56 @@
-module IO = Resp.IO.Default
+open Lwt.Infix
 
 module Reader = Resp.Reader (struct
-  module IO = IO
+  type ic = Lwt_io.input_channel
 
-  type ic = in_channel
-
-  let read_char ic = input_char ic
-  let read ic n = really_input_string ic n
-
-  let read_line t =
-    let rec aux output =
-      match try read t 1 with End_of_file -> "\n" with
-      | "\n" ->
-        output
-      | "\r" ->
-        aux output
-      | c ->
-        aux (output ^ c)
-    in
-    aux ""
+  let read ic n = Lwt_io.read ic ~count:n
+  let read_char = Lwt_io.read_char
+  let read_line ic = Lwt_io.read_line ic
 end)
 
 module Writer = Resp.Writer (struct
-  module IO = IO
+  type oc = Lwt_io.output_channel
 
-  type oc = out_channel
-
-  let write oc s = output_string oc s; flush oc
+  let write oc s = Lwt_io.write oc s >>= fun () -> Lwt_io.flush oc
 end)
 
 module Backend (Data : sig
   type data
 end) =
 struct
-  module IO = IO
+  include Data
 
-  type ic = in_channel
-  type oc = out_channel
-  type data = Data.data
-  type server = Unix.sockaddr
+  type ic = Lwt_io.input_channel
+  type oc = Lwt_io.output_channel
+  type server = Conduit_lwt_unix.ctx * Conduit_lwt_unix.server
 
-  let run server fn = Unix.establish_server (fun ic oc -> fn (ic, oc)) server
+  let run server fn =
+    let mode = snd server in
+    let ctx = fst server in
+    let on_exn exc = Printexc.to_string exc |> print_endline in
+    Conduit_lwt_unix.serve ~on_exn ~ctx ~mode (fun _ ic oc -> fn (ic, oc))
 end
 
 module Client_backend = struct
-  module IO = IO
+  open Lwt.Infix
 
-  type ic = in_channel
-  type oc = out_channel
-  type params = Unix.sockaddr
+  type ic = Lwt_io.input_channel
+  type oc = Lwt_io.output_channel
+  type params = Conduit_lwt_unix.ctx * Conduit_lwt_unix.client
 
-  let connect params = Unix.open_connection params
-end
-
-module Bulk_string = Resp.Bulk.String (Reader) (Writer)
-module Bulk_json = Resp.Bulk.Json (Reader) (Writer)
-
-module Bulk = struct
-  module String = Resp.Make (Bulk_string)
-  module Json = Resp.Make (Bulk_json)
+  let connect params =
+    Conduit_lwt_unix.connect ~ctx:(fst params) (snd params)
+    >|= fun (_, ic, oc) -> (ic, oc)
 end
 
 module Server = struct
   module Make
       (Auth : Resp_server.AUTH) (Data : sig
           type data
-      end)
-      (S : Resp.S
-           with module IO = IO
-            and type Reader.ic = Reader.ic
-            and type Writer.oc = Writer.oc) =
-    Resp_server.Make (Backend (Data)) (Auth) (S)
+      end) =
+    Resp_server.Make (Backend (Data)) (Auth) (Resp.Make (Reader) (Writer))
 
-  module Default =
-    Make (Resp_server.Auth.String) (struct type data = unit end) (Bulk.String)
+  module Default = Make (Resp_server.Auth.String) (struct type data = unit end)
 end
 
-module Client = struct
-  module Make
-      (S : Resp.S
-           with module IO = IO
-            and module Reader = Reader
-            and module Writer = Writer) =
-    Resp_client.Make (Client_backend) (S)
-
-  module Default = Make (Bulk.String)
-end
+module Client = Resp_client.Make (Client_backend) (Resp.Make (Reader) (Writer))

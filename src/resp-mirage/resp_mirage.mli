@@ -1,12 +1,16 @@
-module Reader : Resp.READER with type ic = Lwt_io.input_channel
-module Writer : Resp.WRITER with type oc = Lwt_io.output_channel
+type buffer =
+  { flow : Conduit_mirage.Flow.flow
+  ; mutable buffer : Cstruct.t }
+
+module Reader : Resp.READER with type ic = buffer
+module Writer : Resp.WRITER with type oc = Conduit_mirage.Flow.flow
 
 module Backend (Data : sig
   type data
 end) :
   Resp_server.SERVER
-  with type oc = Lwt_io.output_channel
-   and type ic = Lwt_io.input_channel
+  with type oc = Conduit_mirage.Flow.flow
+   and type ic = buffer
    and type data = Data.data
 
 module Server : sig
@@ -18,7 +22,7 @@ module Server : sig
     with module Auth = Auth
      and type ic = Reader.ic
      and type oc = Writer.oc
-     and type server = Conduit_lwt_unix.ctx * Conduit_lwt_unix.server
+     and type server = Conduit_mirage.conduit * Conduit_mirage.server
      and type client = Reader.ic * Writer.oc
      and type data = Data.data
 
@@ -27,7 +31,7 @@ module Server : sig
     with type Auth.t = string
      and type ic = Reader.ic
      and type oc = Writer.oc
-     and type server = Conduit_lwt_unix.ctx * Conduit_lwt_unix.server
+     and type server = Conduit_mirage.conduit * Conduit_mirage.server
      and type client = Reader.ic * Writer.oc
      and type data = unit
 end
@@ -36,4 +40,4 @@ module Client :
   Resp_client.S
   with type ic = Reader.ic
    and type oc = Writer.oc
-   and type params = Conduit_lwt_unix.ctx * Conduit_lwt_unix.client
+   and type params = Conduit_mirage.conduit * Conduit_mirage.client

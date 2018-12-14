@@ -1,19 +1,17 @@
 (*---------------------------------------------------------------------------
   Copyright (c) 2018 Zach Shipko. All rights reserved. Distributed under the
-  ISC license, see terms at the end of the file. %%NAME%% %%VERSION%%
+  ISC license, see terms at the end of the file. %%NAME%% %%VERSLwtN%%
   ---------------------------------------------------------------------------*)
 
-type 'a bulk =
-  [ `String of string
-  | `Value of 'a ]
+open Lwt.Infix
 
-type 'a t =
+type t =
   [ `Nil
   | `Integer of int64
   | `String of string
   | `Error of string
-  | `Bulk of 'a bulk
-  | `Array of 'a t array ]
+  | `Bulk of string
+  | `Array of t array ]
 
 type lexeme =
   [ `Nil
@@ -54,146 +52,111 @@ let unwrap = function
   | Error e ->
     raise (Exc e)
 
-module type IO = sig
-  type 'a t
-
-  val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
-  val return : 'a -> 'a t
-  val catch : (unit -> 'a t) -> (exn -> 'a t) -> 'a t
-end
-
 module type INPUT = sig
-  module IO : IO
-
   type ic
 
-  val read : ic -> int -> string IO.t
-  val read_line : ic -> string IO.t
-  val read_char : ic -> char IO.t
+  val read : ic -> int -> string Lwt.t
+  val read_line : ic -> string Lwt.t
+  val read_char : ic -> char Lwt.t
 end
 
 module type OUTPUT = sig
-  module IO : IO
-
   type oc
 
-  val write : oc -> string -> unit IO.t
+  val write : oc -> string -> unit Lwt.t
 end
 
 module type READER = sig
   include INPUT
 
-  val discard_sep : ic -> unit IO.t
-  val read_lexeme : ic -> (lexeme, error) result IO.t
-  val decode : ?f:(ic -> int -> 'a IO.t) -> ic -> lexeme -> 'a t IO.t
+  val discard_sep : ic -> unit Lwt.t
+  val read_lexeme : ic -> (lexeme, error) result Lwt.t
+  val decode : ic -> lexeme -> t Lwt.t
 end
 
 module type WRITER = sig
   include OUTPUT
 
-  val write_sep : oc -> unit IO.t
-  val write_lexeme : oc -> lexeme -> unit IO.t
-
-  val encode :
-    ?f:(oc -> 'a -> int * (unit -> unit IO.t)) -> oc -> 'a t -> unit IO.t
-end
-
-module type BULK = sig
-  module IO : IO
-  module Reader : READER with module IO = IO
-  module Writer : WRITER with module IO = IO
-
-  type bulk
-
-  val encoder : (Writer.oc -> bulk -> int * (unit -> unit IO.t)) option
-  val decoder : (Reader.ic -> int -> bulk IO.t) option
+  val write_sep : oc -> unit Lwt.t
+  val write_lexeme : oc -> lexeme -> unit Lwt.t
+  val encode : oc -> t -> unit Lwt.t
 end
 
 module type S = sig
-  include BULK
+  module Reader : READER
+  module Writer : WRITER
 
-  val write : Writer.oc -> bulk t -> unit IO.t
-  val write_s : Writer.oc -> bulk t -> unit IO.t
-  val read : Reader.ic -> bulk t IO.t
-  val read_s : Reader.ic -> bulk t IO.t
+  val write : Writer.oc -> t -> unit Lwt.t
+  val read : Reader.ic -> t Lwt.t
 end
 
 module Reader (I : INPUT) = struct
   include I
 
-  let ( >>= ) = IO.( >>= )
-
   let discard_sep ic =
-    I.read_char ic >>= fun _ -> I.read_char ic >>= fun _ -> IO.return ()
+    I.read_char ic >>= fun _ -> I.read_char ic >>= fun _ -> Lwt.return ()
 
-  let read_lexeme ic : (lexeme, error) result IO.t =
+  let read_lexeme ic : (lexeme, error) result Lwt.t =
     I.read_char ic
     >>= function
     | ':' ->
       I.read_line ic
       >>= fun i ->
       let i = Int64.of_string i in
-      IO.return @@ Ok (`Integer i)
+      Lwt.return @@ Ok (`Integer i)
     | '-' ->
-      I.read_line ic >>= fun line -> IO.return @@ Ok (`Error line)
+      I.read_line ic >>= fun line -> Lwt.return @@ Ok (`Error line)
     | '+' ->
-      I.read_line ic >>= fun line -> IO.return @@ Ok (`String line)
+      I.read_line ic >>= fun line -> Lwt.return @@ Ok (`String line)
     | '*' ->
       I.read_line ic
       >>= fun i ->
       let i = int_of_string i in
-      if i < 0 then IO.return @@ Ok `Nil else IO.return @@ Ok (`As i)
+      if i < 0 then Lwt.return @@ Ok `Nil else Lwt.return @@ Ok (`As i)
     | '$' ->
       I.read_line ic
       >>= fun i ->
       let i = int_of_string i in
-      if i < 0 then IO.return @@ Ok `Nil else IO.return @@ Ok (`Bs i)
+      if i < 0 then Lwt.return @@ Ok `Nil else Lwt.return @@ Ok (`Bs i)
     | c ->
       Printf.printf "Bad char: (%d) %c\n" (int_of_char c) c;
-      IO.return @@ Error (`Unexpected c)
+      Lwt.return @@ Error (`Unexpected c)
 
-  let rec decode ?f ic : lexeme -> 'a t IO.t =
-    let f' =
-      match f with
-      | Some f ->
-        fun ic len -> f ic len >>= fun x -> IO.return @@ `Value x
-      | None ->
-        fun ic len -> read ic len >>= fun x -> IO.return @@ `String x
-    in
-    function
+  let rec decode ic : lexeme -> t Lwt.t = function
     | `Nil ->
-      IO.return `Nil
+      Lwt.return `Nil
     | `Integer i ->
-      IO.return @@ `Integer i
+      Lwt.return @@ `Integer i
     | `Error e ->
-      IO.return @@ `Error e
+      Lwt.return @@ `Error e
     | `String s ->
-      IO.return @@ `String s
+      Lwt.return @@ `String s
     | `Bs len ->
-      f' ic len >>= fun b -> discard_sep ic >>= fun () -> IO.return @@ `Bulk b
+      read ic len
+      >>= fun b -> discard_sep ic >>= fun () -> Lwt.return @@ `Bulk b
     | `As len ->
       let arr = Array.make len `Nil in
       let rec aux = function
         | 0 ->
-          IO.return ()
+          Lwt.return ()
         | n -> (
           read_lexeme ic
           >>= function
           | Ok v ->
-            decode ?f ic v
+            decode ic v
             >>= fun x ->
             arr.(len - n) <- x;
             aux (n - 1)
           | Error err ->
             raise (Exc err) )
       in
-      aux len >>= fun () -> IO.return @@ `Array arr
+      aux len >>= fun () -> Lwt.return @@ `Array arr
 end
 
 module Writer (O : OUTPUT) = struct
   include O
 
-  let ( >>= ) = IO.( >>= )
+  let ( >>= ) = Lwt.( >>= )
   let write_sep oc = O.write oc "\r\n"
 
   let write_lexeme oc = function
@@ -210,7 +173,7 @@ module Writer (O : OUTPUT) = struct
     | `String s ->
       O.write oc "+" >>= fun () -> O.write oc s >>= fun () -> write_sep oc
 
-  let rec encode ?f oc = function
+  let rec encode oc = function
     | `Nil ->
       write_lexeme oc `Nil
     | `Error e ->
@@ -219,14 +182,7 @@ module Writer (O : OUTPUT) = struct
       write_lexeme oc (`String s)
     | `Integer i ->
       write_lexeme oc (`Integer i)
-    | `Bulk (`Value b) -> (
-      match f with
-      | Some f ->
-        let i, f = f oc b in
-        write_lexeme oc (`Bs i) >>= fun () -> f () >>= fun () -> write_sep oc
-      | None ->
-        raise (Exc `Invalid_encoder) )
-    | `Bulk (`String s) ->
+    | `Bulk s ->
       let len = String.length s in
       write_lexeme oc (`Bs len)
       >>= fun () -> write oc s >>= fun () -> write_sep oc
@@ -235,19 +191,19 @@ module Writer (O : OUTPUT) = struct
       let rec write i =
         match i with
         | 0 ->
-          IO.return ()
+          Lwt.return ()
         | n ->
-          encode ?f oc a.(len - i) >>= fun () -> write (n - 1)
+          encode oc a.(len - i) >>= fun () -> write (n - 1)
       in
       write_lexeme oc (`As len) >>= fun () -> write len
 end
 
-module Make (Bulk : BULK) = struct
-  include Bulk
+module Make (Reader : READER) (Writer : WRITER) = struct
+  module Reader = Reader
+  module Writer = Writer
 
-  let ( >>= ) = IO.( >>= )
-  let decode = Reader.decode ?f:Bulk.decoder
-  let decode_s ic = Reader.decode ?f:None ic
+  let ( >>= ) = Lwt.( >>= )
+  let decode = Reader.decode
 
   let read ic =
     Reader.read_lexeme ic
@@ -257,115 +213,44 @@ module Make (Bulk : BULK) = struct
     | Error e ->
       raise (Exc e)
 
-  let read_s ic =
-    Reader.read_lexeme ic
-    >>= function
-    | Ok l ->
-      decode_s ic l
-    | Error e ->
-      raise (Exc e)
-
-  let encode = Writer.encode ?f:Bulk.encoder
-  let encode_s oc = Writer.encode ?f:None oc
+  let encode = Writer.encode
   let write oc = encode oc
-  let write_s oc x = encode_s oc x
 end
 
-module Bulk = struct
-  module Json (Reader : READER) (Writer : WRITER with module IO = Reader.IO) =
-  struct
-    module IO = Reader.IO
-    module Reader = Reader
-    module Writer = Writer
-
-    type bulk = Ezjsonm.t
-
-    (* TODO: make encoder/decoder streaming *)
-    let encoder =
-      Some
-        (fun oc bulk ->
-          let s = Ezjsonm.to_string bulk in
-          (String.length s, fun () -> Writer.write oc s) )
-
-    let decoder =
-      Some
-        (fun ic len ->
-          let open IO in
-          Reader.read ic len >>= fun s -> Ezjsonm.from_string s |> return )
-  end
-
-  module String (Reader : READER) (Writer : WRITER with module IO = Reader.IO) =
-  struct
-    module IO = Reader.IO
-    module Reader = Reader
-    module Writer = Writer
-
-    type bulk = string
-
-    let encoder =
-      Some (fun oc bulk -> (String.length bulk, fun () -> Writer.write oc bulk))
-
-    let decoder = Some Reader.read
-  end
-end
-
-module IO = struct
-  module Default = struct
-    type 'a t = 'a
-
-    let return a = a
-    let ( >>= ) a f = f a
-    let catch a b = try a () with exc -> b exc
-  end
-end
-
-module Buffer_output = struct
-  module IO = IO.Default
-
-  type oc = Buffer.t
-
-  let write oc s = Buffer.add_string oc s
-end
-
-module String_output = struct
-  module IO = IO.Default
-
+module String_writer = Writer (struct
   type oc = string ref
 
-  let write oc s = oc := !oc ^ s
-end
+  let write oc s =
+    oc := !oc ^ s;
+    Lwt.return_unit
+end)
 
-module String_input = struct
-  module IO = IO.Default
-
+module String_reader = Reader (struct
   type ic = string ref
 
   let read input i =
-    let s = String.sub !input 0 i in
-    input := String.sub !input i (String.length !input - i);
-    s
+    Lwt.wrap (fun () ->
+        let s = String.sub !input 0 i in
+        input := String.sub !input i (String.length !input - i);
+        s )
 
-  let read_char input =
-    let c = read input 1 in
-    c.[0]
+  let read_char input = read input 1 >|= fun c -> c.[0]
 
   let read_line t =
     let rec aux output =
-      match read t 1 with
+      read t 1
+      >>= function
       | "\n" ->
-        output
+        Lwt.return output
       | "\r" ->
         aux output
       | c ->
         aux (output ^ c)
     in
     aux ""
-end
+end)
 
-module Buffer_writer = Writer (Buffer_output)
-module String_reader = Reader (String_input)
-module String_writer = Writer (String_output)
-module String = Make (Bulk.String (String_reader) (String_writer))
+module String = Make (String_reader) (String_writer)
 
 let is_nil = function
   | `Nil ->
@@ -373,18 +258,10 @@ let is_nil = function
   | _ ->
     false
 
-let to_value = function
-  | `Bulk (`Value v) ->
-    Ok v
-  | _ ->
-    Error `Invalid_value
-
-let to_value_exn x = to_value x |> unwrap
-
 let to_string = function
   | `String s ->
     Ok s
-  | `Bulk (`String s) ->
+  | `Bulk s ->
     Ok s
   | `Error e ->
     Ok e
@@ -397,24 +274,11 @@ let to_string = function
 
 let to_string_exn x = to_string x |> unwrap
 
-let to_string_or_value x =
-  match to_string x with
-  | Ok s ->
-    Ok (`String s)
-  | Error _ -> (
-    match to_value x with
-    | Ok v ->
-      Ok (`Value v)
-    | Error e ->
-      Error e )
-
-let to_string_or_value_exn x = to_string_or_value x |> unwrap
-
 let to_integer = function
   | `Integer i ->
     Ok i
   | `String s
-  | `Bulk (`String s) -> (
+  | `Bulk s -> (
     try Ok (Int64.of_string s) with _ -> Error `Invalid_value )
   | _ ->
     Error `Invalid_value
@@ -425,7 +289,7 @@ let to_float = function
   | `Integer i ->
     Ok (Int64.to_float i)
   | `String s
-  | `Bulk (`String s) -> (
+  | `Bulk s -> (
     try Ok (float_of_string s) with _ -> Error `Invalid_value )
   | _ ->
     Error `Invalid_value
@@ -439,6 +303,11 @@ let to_array f = function
     Error `Invalid_value
 
 let to_array_exn f x = to_array f x |> unwrap
+
+let of_alist l =
+  `Array
+    ( Array.of_list
+    @@ List.fold_right (fun (k, v) acc -> `String k :: v :: acc) l [] )
 
 let to_alist k v = function
   | `Array a ->
@@ -466,7 +335,7 @@ let to_alist_exn k v x = to_alist k v x |> unwrap
   REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
   AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
   INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
-  LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-  OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+  LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTLwtN OF CONTRACT, NEGLIGENCE
+  OR OTHER TORTLwtUS ACTLwtN, ARISING OUT OF OR IN CONNECTLwtN WITH THE USE OR
   PERFORMANCE OF THIS SOFTWARE.
   ---------------------------------------------------------------------------*)

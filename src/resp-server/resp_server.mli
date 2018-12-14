@@ -5,14 +5,12 @@ module type AUTH = sig
 end
 
 module type SERVER = sig
-  module IO : Resp.IO
-
   type ic
   type oc
   type server
   type data
 
-  val run : server -> (ic * oc -> unit IO.t) -> unit IO.t
+  val run : server -> (ic * oc -> unit Lwt.t) -> unit Lwt.t
 end
 
 module Auth : sig
@@ -22,25 +20,20 @@ end
 
 module type S = sig
   include SERVER
-
-  module Value :
-    Resp.S with module IO = IO and type Reader.ic = ic and type Writer.oc = oc
-
+  module Value : Resp.S with type Reader.ic = ic and type Writer.oc = oc
   module Auth : AUTH
 
   type client = ic * oc
-  type command = data -> client -> string -> int -> unit IO.t
+  type command = data -> client -> string -> int -> unit Lwt.t
   type t
 
-  val discard_n : client -> int -> unit IO.t
-  val finish : client -> nargs:int -> int -> unit IO.t
-  val ok : client -> unit IO.t
-  val error : client -> string -> unit IO.t
-  val invalid_arguments : client -> unit IO.t
-  val send : client -> Value.bulk Resp.t -> unit IO.t
-  val send_s : client -> Value.bulk Resp.t -> unit IO.t
-  val recv : client -> Value.bulk Resp.t IO.t
-  val recv_s : client -> Value.bulk Resp.t IO.t
+  val discard_n : client -> int -> unit Lwt.t
+  val finish : client -> nargs:int -> int -> unit Lwt.t
+  val ok : client -> unit Lwt.t
+  val error : client -> string -> unit Lwt.t
+  val invalid_arguments : client -> unit Lwt.t
+  val send : client -> Resp.t -> unit Lwt.t
+  val recv : client -> Resp.t Lwt.t
 
   val create :
        ?auth:Auth.t
@@ -50,20 +43,18 @@ module type S = sig
     -> data
     -> t
 
-  val start : t -> unit IO.t
+  val start : t -> unit Lwt.t
 end
 
 module Make
     (Server : SERVER)
     (Auth : AUTH)
     (Value : Resp.S
-             with module IO = Server.IO
-              and type Reader.ic = Server.ic
+             with type Reader.ic = Server.ic
               and type Writer.oc = Server.oc) :
   S
   with type server = Server.server
    and module Auth = Auth
-   and module IO = Server.IO
    and type ic = Server.ic
    and type oc = Server.oc
    and module Value = Value

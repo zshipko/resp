@@ -1,20 +1,10 @@
 open Lwt.Infix
 
-module IO = struct
-  type 'a t = 'a Lwt.t
-
-  let return = Lwt.return
-  let ( >>= ) = Lwt.bind
-  let catch = Lwt.catch
-end
-
 type buffer =
   { flow : Conduit_mirage.Flow.flow
   ; mutable buffer : Cstruct.t }
 
 module Reader = Resp.Reader (struct
-  module IO : Resp.IO with type 'a t = 'a Lwt.t = IO
-
   type ic = buffer
 
   let update_buffer_if_needed t n =
@@ -77,12 +67,9 @@ module Reader = Resp.Reader (struct
 end)
 
 module Writer = Resp.Writer (struct
-  module IO : Resp.IO with type 'a t = 'a Lwt.t = IO
-
   type oc = Conduit_mirage.Flow.flow
 
   let write oc s =
-    let open IO in
     Conduit_mirage.Flow.write oc (Cstruct.of_string s)
     >>= function
     | Ok () ->
@@ -97,7 +84,6 @@ module Backend (Data : sig
 end) =
 struct
   include Data
-  module IO = IO
 
   type ic = buffer
   type oc = Conduit_mirage.Flow.flow
@@ -111,7 +97,6 @@ end
 
 module Client_backend = struct
   open Lwt.Infix
-  module IO = IO
 
   type ic = buffer
   type oc = Conduit_mirage.Flow.flow
@@ -122,36 +107,14 @@ module Client_backend = struct
     >|= fun c -> ({flow = c; buffer = Cstruct.empty}, c)
 end
 
-module Bulk_string = Resp.Bulk.String (Reader) (Writer)
-module Bulk_json = Resp.Bulk.Json (Reader) (Writer)
-
-module Bulk = struct
-  module String = Resp.Make (Bulk_string)
-  module Json = Resp.Make (Bulk_json)
-end
-
 module Server = struct
   module Make
       (Auth : Resp_server.AUTH) (Data : sig
           type data
-      end)
-      (S : Resp.S
-           with module IO = IO
-            and type Reader.ic = Reader.ic
-            and type Writer.oc = Writer.oc) =
-    Resp_server.Make (Backend (Data)) (Auth) (S)
+      end) =
+    Resp_server.Make (Backend (Data)) (Auth) (Resp.Make (Reader) (Writer))
 
-  module Default =
-    Make (Resp_server.Auth.String) (struct type data = unit end) (Bulk.String)
+  module Default = Make (Resp_server.Auth.String) (struct type data = unit end)
 end
 
-module Client = struct
-  module Make
-      (S : Resp.S
-           with module IO = IO
-            and module Reader = Reader
-            and module Writer = Writer) =
-    Resp_client.Make (Client_backend) (S)
-
-  module Default = Make (Bulk.String)
-end
+module Client = Resp_client.Make (Client_backend) (Resp.Make (Reader) (Writer))

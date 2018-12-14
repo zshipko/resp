@@ -5,14 +5,12 @@ module type AUTH = sig
 end
 
 module type SERVER = sig
-  module IO : Resp.IO
-
   type ic
   type oc
   type server
   type data
 
-  val run : server -> (ic * oc -> unit IO.t) -> unit IO.t
+  val run : server -> (ic * oc -> unit Lwt.t) -> unit Lwt.t
 end
 
 module Auth = struct
@@ -38,25 +36,20 @@ end
 
 module type S = sig
   include SERVER
-
-  module Value :
-    Resp.S with module IO = IO and type Reader.ic = ic and type Writer.oc = oc
-
+  module Value : Resp.S with type Reader.ic = ic and type Writer.oc = oc
   module Auth : AUTH
 
   type client = ic * oc
-  type command = data -> client -> string -> int -> unit IO.t
+  type command = data -> client -> string -> int -> unit Lwt.t
   type t
 
-  val discard_n : client -> int -> unit IO.t
-  val finish : client -> nargs:int -> int -> unit IO.t
-  val ok : client -> unit IO.t
-  val error : client -> string -> unit IO.t
-  val invalid_arguments : client -> unit IO.t
-  val send : client -> Value.bulk Resp.t -> unit IO.t
-  val send_s : client -> Value.bulk Resp.t -> unit IO.t
-  val recv : client -> Value.bulk Resp.t IO.t
-  val recv_s : client -> Value.bulk Resp.t IO.t
+  val discard_n : client -> int -> unit Lwt.t
+  val finish : client -> nargs:int -> int -> unit Lwt.t
+  val ok : client -> unit Lwt.t
+  val error : client -> string -> unit Lwt.t
+  val invalid_arguments : client -> unit Lwt.t
+  val send : client -> Resp.t -> unit Lwt.t
+  val recv : client -> Resp.t Lwt.t
 
   val create :
        ?auth:Auth.t
@@ -66,25 +59,24 @@ module type S = sig
     -> data
     -> t
 
-  val start : t -> unit IO.t
+  val start : t -> unit Lwt.t
 end
 
 module Make
     (Server : SERVER)
     (Auth : AUTH)
     (Value : Resp.S
-             with module IO = Server.IO
-              and type Reader.ic = Server.ic
+             with type Reader.ic = Server.ic
               and type Writer.oc = Server.oc) =
 struct
   include Server
   module Value = Value
   module Auth = Auth
 
-  let ( >>= ) = IO.( >>= )
+  let ( >>= ) = Lwt.( >>= )
 
   type client = ic * oc
-  type command = data -> client -> string -> int -> unit IO.t
+  type command = data -> client -> string -> int -> unit Lwt.t
 
   type t =
     { server : server
@@ -93,16 +85,11 @@ struct
     ; commands : (string, command) Hashtbl.t
     ; default : string }
 
-  let ok (_, oc) = Value.write_s oc (`String "OK")
-
-  let error (_, oc) msg =
-    Value.write_s oc (`Error (Printf.sprintf "ERR %s" msg))
-
+  let ok (_, oc) = Value.write oc (`String "OK")
+  let error (_, oc) msg = Value.write oc (`Error (Printf.sprintf "ERR %s" msg))
   let invalid_arguments client = error client "Invalid arguments"
   let send (_, oc) x = Value.write oc x
-  let send_s (_, oc) x = Value.write_s oc x
   let recv (ic, _) = Value.read ic
-  let recv_s (ic, _) = Value.read_s ic
 
   let hashtbl_of_list l =
     let ht = Hashtbl.create (List.length l) in
@@ -120,28 +107,19 @@ struct
     | None ->
       true
 
-  let to_string = function
-    | `Bulk (`String s) ->
-      s
-    | `String s ->
-      s
-    | _ ->
-      raise (Resp.Exc (`Msg "Invalid argument"))
-
   let split_command_s arr : string * string array =
-    ( String.lowercase_ascii @@ to_string arr.(0)
-    , Array.map to_string (Array.sub arr 1 (Array.length arr - 1)) )
+    ( String.lowercase_ascii @@ Resp.to_string_exn arr.(0)
+    , Array.map Resp.to_string_exn (Array.sub arr 1 (Array.length arr - 1)) )
 
   let rec discard_n client n =
-    if n > 0 then
-      Value.read_s (fst client) >>= fun _ -> discard_n client (n - 1)
-    else IO.return ()
+    if n > 0 then Value.read (fst client) >>= fun _ -> discard_n client (n - 1)
+    else Lwt.return ()
 
   let finish client ~nargs used = discard_n client (nargs - used)
 
   let rec handle t client authenticated =
     let argc = ref 0 in
-    IO.catch
+    Lwt.catch
       (fun () ->
         if not authenticated then handle_not_authenticated t client
         else
@@ -149,10 +127,10 @@ struct
           >>= function
           | Ok (`As n) -> (
             argc := n - 1;
-            Value.read_s (fst client)
+            Value.read (fst client)
             >>= function
             | `String s
-            | `Bulk (`String s) ->
+            | `Bulk s ->
               let s = String.lowercase_ascii s in
               let f =
                 try Hashtbl.find t.commands s with Not_found ->
@@ -182,12 +160,12 @@ struct
         | Invalid_argument msg ->
           error client msg
         | End_of_file ->
-          IO.return ()
+          Lwt.return ()
         | exc ->
           raise exc)
 
   and handle_not_authenticated t client =
-    Value.read_s (fst client)
+    Value.read (fst client)
     >>= function
     | `Array arr -> (
       let cmd, args = split_command_s arr in

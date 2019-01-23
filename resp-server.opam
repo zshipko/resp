@@ -22,5 +22,5 @@ build:
 ]
 
 synopsis: """
-Redis serialization protocol client
+Redis serialization protocol server
 """

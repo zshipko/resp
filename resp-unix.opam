@@ -27,5 +27,5 @@ build:
 ]
 
 synopsis: """
-Redis serialization protocol tools for Lwt and Unix
+Redis serialization protocol library for Unix
 """

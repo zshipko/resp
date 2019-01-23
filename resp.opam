@@ -24,5 +24,5 @@ build:
 ]
 
 synopsis: """
-Redis serialization protocol tools
+Redis serialization protocol library
 """

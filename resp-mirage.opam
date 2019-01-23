@@ -26,5 +26,5 @@ build:
 ]
 
 synopsis: """
-Redis serialization protocol tools for Lwt and Mirage
+Redis serialization protocol tools for MirageOS
 """

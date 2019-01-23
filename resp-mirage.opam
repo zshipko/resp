@@ -12,10 +12,10 @@ depends:
 [
     "ocaml" {>= "4.03.0"}
     "dune" {build}
-    "resp"
-    "resp-client"
-    "resp-server"
-    "mirage-conduit"
+    "resp" {>= "0.9"}
+    "resp-client" {>= "0.9"}
+    "resp-server" {>= "0.9"}
+    "mirage-conduit" {>= "3.01"}
 ]
 
 depopts: []

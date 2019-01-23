@@ -12,15 +12,13 @@ depends:
 [
     "ocaml" {>= "4.03.0"}
     "dune" {build}
-    "resp"
-    "resp-client"
+    "resp" {>= "0.9"}
+    "resp-client" {>= "0.9"}
 ]
-
-depopts: []
 
 build:
 [
-    ["dune" "build" "-p" name]
+    ["dune" "build" "-p" name "-j" jobs]
 ]
 
 synopsis: """

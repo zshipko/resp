@@ -12,16 +12,15 @@ depends:
 [
     "ocaml" {>= "4.03.0"}
     "dune" {build}
+    "lwt" {>= "4.1"}
     "alcotest" {with-test}
-    "ezjsonm"
-    "lwt"
 ]
 
 depopts: []
 
 build:
 [
-    ["dune" "build" "-p" name]
+    ["dune" "build" "-p" name "-j" jobs]
 ]
 
 synopsis: """

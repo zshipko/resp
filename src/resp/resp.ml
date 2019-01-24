@@ -119,7 +119,6 @@ module Reader (I : INPUT) = struct
       let i = int_of_string i in
       if i < 0 then Lwt.return @@ Ok `Nil else Lwt.return @@ Ok (`Bs i)
     | c ->
-      Printf.printf "Bad char: (%d) %c\n" (int_of_char c) c;
       Lwt.return @@ Error (`Unexpected c)
 
   let rec decode ic : lexeme -> t Lwt.t = function

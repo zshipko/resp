@@ -114,7 +114,9 @@ module Reader (I : INPUT) = struct
       >>= fun i ->
       let i = int_of_string i in
       if i < 0 then Lwt.return @@ Ok `Nil else Lwt.return @@ Ok (`Bs i)
-    | '\r' | '\n' -> read_lexeme ic
+    | '\r' ->
+        I.read_char ic >>= fun _ ->
+        read_lexeme ic
     | c ->
       Lwt.return @@ Error (`Unexpected c)
 

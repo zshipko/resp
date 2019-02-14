@@ -12,7 +12,7 @@ depends:
 [
     "ocaml" {>= "4.05.0"}
     "dune" {build}
-    "resp" {>= "0.9"}
+    "resp" {>= "0.9.1"}
 ]
 
 build:

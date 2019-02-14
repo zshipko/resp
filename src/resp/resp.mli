@@ -54,7 +54,6 @@ end
 module type READER = sig
   include INPUT
 
-  val discard_sep : ic -> unit Lwt.t
   val read_lexeme : ic -> (lexeme, error) result Lwt.t
   val decode : ic -> lexeme -> t Lwt.t
 end

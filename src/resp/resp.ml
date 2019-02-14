@@ -69,7 +69,6 @@ end
 module type READER = sig
   include INPUT
 
-  val discard_sep : ic -> unit Lwt.t
   val read_lexeme : ic -> (lexeme, error) result Lwt.t
   val decode : ic -> lexeme -> t Lwt.t
 end
@@ -93,10 +92,7 @@ end
 module Reader (I : INPUT) = struct
   include I
 
-  let discard_sep ic =
-    I.read_char ic >>= fun _ -> I.read_char ic >>= fun _ -> Lwt.return ()
-
-  let read_lexeme ic : (lexeme, error) result Lwt.t =
+  let rec read_lexeme ic : (lexeme, error) result Lwt.t =
     I.read_char ic
     >>= function
     | ':' ->
@@ -118,6 +114,7 @@ module Reader (I : INPUT) = struct
       >>= fun i ->
       let i = int_of_string i in
       if i < 0 then Lwt.return @@ Ok `Nil else Lwt.return @@ Ok (`Bs i)
+    | '\r' | '\n' -> read_lexeme ic
     | c ->
       Lwt.return @@ Error (`Unexpected c)
 
@@ -131,25 +128,32 @@ module Reader (I : INPUT) = struct
     | `String s ->
       Lwt.return @@ `String s
     | `Bs len ->
-      read ic len
-      >>= fun b -> discard_sep ic >>= fun () -> Lwt.return @@ `Bulk b
+      if len = 0 then
+        Lwt.return (`Bulk "")
+      else
+        read ic len
+        >>= fun b ->  Lwt.return @@ `Bulk b
     | `As len ->
-      let arr = Array.make len `Nil in
-      let rec aux = function
-        | 0 ->
-          Lwt.return ()
-        | n -> (
-          read_lexeme ic
-          >>= function
-          | Ok v ->
-            decode ic v
-            >>= fun x ->
-            arr.(len - n) <- x;
-            aux (n - 1)
-          | Error err ->
-            raise (Exc err) )
-      in
-      aux len >>= fun () -> Lwt.return @@ `Array arr
+        if len = 0 then
+          Lwt.return (`Array [||])
+        else
+          let arr = Array.make len `Nil in
+          let rec aux = function
+            | 0 ->
+              Lwt.return ()
+            | n -> (
+              read_lexeme ic
+              >>= function
+              | Ok v ->
+                decode ic v
+                >>= fun x ->
+                arr.(len - n) <- x;
+                aux (n - 1)
+              | Error err ->
+                raise (Exc err) )
+          in
+          aux len >>= fun () ->
+          Lwt.return @@ `Array arr
 end
 
 module Writer (O : OUTPUT) = struct

@@ -89,6 +89,8 @@ module String :
 val is_nil : t -> bool
 val to_string : t -> (string, error) result
 val to_string_exn : t -> string
+val to_bytes : t -> (bytes, error) result
+val to_bytes_exn : t -> bytes
 val to_integer : t -> (int64, error) result
 val to_integer_exn : t -> int64
 val to_float : t -> (float, error) result

@@ -17,7 +17,6 @@ depends:
     "resp-server" {>= "0.9.1"}
     "conduit-lwt-unix" {>= "1.3"}
     "alcotest" {with-test}
-    "alcotest-lwt" {with-test}
 ]
 
 build:

@@ -37,25 +37,25 @@ let client, pid =
 
 let invalid_response () = Alcotest.fail "Invalid response type"
 
-let test_set _ () =
-  Client.run_s client [|"set"; "abc"; "123"|]
+let test_set _ =
+  Lwt_main.run (Client.run_s client [|"set"; "abc"; "123"|]
   >|= function
   | `String s ->
     Alcotest.(check string) "set OK" s "OK"
   | _ ->
-    invalid_response ()
+    invalid_response ())
 
-let test_get _ () =
-  Client.run_s client [|"get"; "abc"|]
+let test_get _ =
+  Lwt_main.run (Client.run_s client [|"get"; "abc"|]
   >|= function
   | `Bulk s ->
     Alcotest.(check string) "Value of abc" s "123"
   | _ ->
-    invalid_response ()
+    invalid_response ())
 
 let basic =
-  [ Alcotest_lwt.test_case "Set" `Quick test_set
-  ; Alcotest_lwt.test_case "Get" `Quick test_get ]
+  [ Alcotest.test_case "Set" `Quick test_set
+  ; Alcotest.test_case "Get" `Quick test_get ]
 
 let () =
   Alcotest.run ~and_exit:false "Resp_unix" [("basic", basic)];

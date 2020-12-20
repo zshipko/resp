@@ -279,6 +279,13 @@ let to_string = function
 
 let to_string_exn x = to_string x |> unwrap
 
+let to_bytes x =
+  match to_string x with
+  | Ok x -> Ok (Bytes.unsafe_of_string x)
+  | Error e -> Error e
+
+let to_bytes_exn x = to_bytes x |> unwrap
+
 let to_integer = function
   | `Integer i ->
     Ok i

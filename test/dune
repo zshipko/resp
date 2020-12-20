@@ -4,12 +4,12 @@
     (modules util))
 
 (executables
-    (libraries alcotest-lwt resp)
+    (libraries alcotest resp)
     (names test)
     (modules test))
 
 (executables
-    (libraries alcotest-lwt util resp-unix)
+    (libraries alcotest util resp-unix)
     (names test_unix)
     (modules test_unix))
 

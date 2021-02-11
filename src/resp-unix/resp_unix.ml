@@ -16,10 +16,7 @@ module Writer = Resp.Writer (struct
   let write oc s = Lwt_io.write oc s >>= fun () -> Lwt_io.flush oc
 end)
 
-module Backend (Data : sig
-  type data
-end) =
-struct
+module Backend (Data : Resp_server.DATA) = struct
   include Data
 
   type ic = Lwt_io.input_channel
@@ -50,10 +47,7 @@ module Client_backend = struct
 end
 
 module Server = struct
-  module Make
-      (Auth : Resp_server.AUTH) (Data : sig
-        type data
-      end) =
+  module Make (Auth : Resp_server.AUTH) (Data : Resp_server.DATA) =
     Resp_server.Make (Backend (Data)) (Auth) (Resp.Make (Reader) (Writer))
 
   module Default =
@@ -61,6 +55,12 @@ module Server = struct
       (Resp_server.Auth.String)
       (struct
         type data = unit
+
+        module Client = struct
+          type t = unit
+
+          let init _ = ()
+        end
       end)
 end
 

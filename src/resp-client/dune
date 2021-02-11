@@ -1,5 +1,4 @@
 (library
-    (name resp_client)
-    (public_name resp-client)
-    (libraries resp)
-)
+ (name resp_client)
+ (public_name resp-client)
+ (libraries resp))

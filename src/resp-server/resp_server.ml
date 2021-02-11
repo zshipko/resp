@@ -1,20 +1,4 @@
-module type AUTH = sig
-  type t
-
-  val check : t -> string array -> bool
-end
-
-module type SERVER = sig
-  type ic
-
-  type oc
-
-  type server
-
-  type data
-
-  val run : server -> (ic * oc -> unit Lwt.t) -> unit Lwt.t
-end
+include Resp_server_intf
 
 module Auth = struct
   module String = struct
@@ -35,44 +19,6 @@ module Auth = struct
   end
 end
 
-module type S = sig
-  include SERVER
-
-  module Value : Resp.S with type Reader.ic = ic and type Writer.oc = oc
-
-  module Auth : AUTH
-
-  type client = ic * oc
-
-  type command = data -> client -> string -> int -> unit Lwt.t
-
-  type t
-
-  val discard_n : client -> int -> unit Lwt.t
-
-  val finish : client -> nargs:int -> int -> unit Lwt.t
-
-  val ok : client -> unit Lwt.t
-
-  val error : client -> string -> unit Lwt.t
-
-  val invalid_arguments : client -> unit Lwt.t
-
-  val send : client -> Resp.t -> unit Lwt.t
-
-  val recv : client -> Resp.t Lwt.t
-
-  val create :
-    ?auth:Auth.t ->
-    ?commands:(string * command) list ->
-    ?default:string ->
-    server ->
-    data ->
-    t
-
-  val start : t -> unit Lwt.t
-end
-
 module Make
     (Server : SERVER)
     (Auth : AUTH)
@@ -86,7 +32,7 @@ struct
 
   let ( >>= ) = Lwt.( >>= )
 
-  type client = ic * oc
+  type client = { data : Client.t; ic : ic; oc : oc }
 
   type command = data -> client -> string -> int -> unit Lwt.t
 
@@ -98,15 +44,16 @@ struct
     default : string;
   }
 
-  let ok (_, oc) = Value.write oc (`String "OK")
+  let ok { oc; _ } = Value.write oc (`String "OK")
 
-  let error (_, oc) msg = Value.write oc (`Error (Printf.sprintf "ERR %s" msg))
+  let error { oc; _ } msg =
+    Value.write oc (`Error (Printf.sprintf "ERR %s" msg))
 
   let invalid_arguments client = error client "Invalid arguments"
 
-  let send (_, oc) x = Value.write oc x
+  let send { oc; _ } x = Value.write oc x
 
-  let recv (ic, _) = Value.read ic
+  let recv { ic; _ } = Value.read ic
 
   let hashtbl_of_list l =
     let ht = Hashtbl.create (List.length l) in
@@ -125,21 +72,21 @@ struct
       Array.map Resp.to_string_exn (Array.sub arr 1 (Array.length arr - 1)) )
 
   let rec discard_n client n =
-    if n > 0 then Value.read (fst client) >>= fun _ -> discard_n client (n - 1)
+    if n > 0 then Value.read client.ic >>= fun _ -> discard_n client (n - 1)
     else Lwt.return ()
 
   let finish client ~nargs used = discard_n client (nargs - used)
 
-  let rec handle t client authenticated =
+  let rec handle t (client : client) authenticated =
     let argc = ref 0 in
     Lwt.catch
       (fun () ->
         if not authenticated then handle_not_authenticated t client
         else
-          Value.Reader.read_lexeme (fst client) >>= function
+          Value.Reader.read_lexeme client.ic >>= function
           | Ok (`As n) -> (
               argc := n - 1;
-              Value.read (fst client) >>= function
+              Value.read client.ic >>= function
               | `String s | `Bulk s ->
                   let s = String.lowercase_ascii s in
                   let f =
@@ -169,7 +116,7 @@ struct
         | exc -> raise exc)
 
   and handle_not_authenticated t client =
-    Value.read (fst client) >>= function
+    Value.read client.ic >>= function
     | `Array arr -> (
         let cmd, args = split_command_s arr in
         match (cmd, args) with
@@ -186,5 +133,9 @@ struct
         error client "authentication required" >>= fun () ->
         handle t client false
 
-  let start t = run t.server (fun client -> handle t client (t.auth = None))
+  let start t =
+    run t.server (fun (ic, oc) ->
+        let data = Client.init t.data in
+        let client = { ic; oc; data } in
+        handle t client (t.auth = None))
 end

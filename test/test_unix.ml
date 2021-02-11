@@ -10,55 +10,59 @@ module Server =
     (Resp_server.Auth.String)
     (struct
       type data = (string, string) Hashtbl.t
+
+      module Client = struct
+        type t = unit
+
+        let init _ = ()
+      end
     end)
 
 include Util.Make (Server)
 
 let client, pid =
   Lwt_main.run
-    ( match Unix.fork () with
+    (match Unix.fork () with
     | -1 ->
-      Printf.eprintf "Unable to fork process";
-      exit 1
+        Printf.eprintf "Unable to fork process";
+        exit 1
     | 0 ->
-      let server = `TCP (`Port 1234) in
-      let data = Hashtbl.create 8 in
-      let server =
-        Server.create ~commands (Conduit_lwt_unix.default_ctx, server) data
-      in
-      Server.start server >|= fun () -> exit 0
+        let server = `TCP (`Port 1234) in
+        let data = Hashtbl.create 8 in
+        let server =
+          Server.create ~commands (Conduit_lwt_unix.default_ctx, server) data
+        in
+        Server.start server >|= fun () -> exit 0
     | pid ->
-      Unix.sleep 1;
-      let addr = Ipaddr.of_string_exn "127.0.0.1" in
-      let params =
-        (Conduit_lwt_unix.default_ctx, `TCP (`IP addr, `Port 1234))
-      in
-      Client.connect params >|= fun client -> (client, pid) )
+        Unix.sleep 1;
+        let addr = Ipaddr.of_string_exn "127.0.0.1" in
+        let params =
+          (Conduit_lwt_unix.default_ctx, `TCP (`IP addr, `Port 1234))
+        in
+        Client.connect params >|= fun client -> (client, pid))
 
 let invalid_response () = Alcotest.fail "Invalid response type"
 
 let test_set _ =
-  Lwt_main.run (Client.run_s client [|"set"; "abc"; "123"|]
-  >|= function
-  | `String s ->
-    Alcotest.(check string) "set OK" s "OK"
-  | _ ->
-    invalid_response ())
+  Lwt_main.run
+    (Client.run_s client [| "set"; "abc"; "123" |] >|= function
+     | `String s -> Alcotest.(check string) "set OK" s "OK"
+     | _ -> invalid_response ())
 
 let test_get _ =
-  Lwt_main.run (Client.run_s client [|"get"; "abc"|]
-  >|= function
-  | `Bulk s ->
-    Alcotest.(check string) "Value of abc" s "123"
-  | _ ->
-    invalid_response ())
+  Lwt_main.run
+    (Client.run_s client [| "get"; "abc" |] >|= function
+     | `Bulk s -> Alcotest.(check string) "Value of abc" s "123"
+     | _ -> invalid_response ())
 
 let basic =
-  [ Alcotest.test_case "Set" `Quick test_set
-  ; Alcotest.test_case "Get" `Quick test_get ]
+  [
+    Alcotest.test_case "Set" `Quick test_set;
+    Alcotest.test_case "Get" `Quick test_get;
+  ]
 
 let () =
-  Alcotest.run ~and_exit:false "Resp_unix" [("basic", basic)];
+  Alcotest.run ~and_exit:false "Resp_unix" [ ("basic", basic) ];
   Unix.kill pid Sys.sigint
 
 (*---------------------------------------------------------------------------

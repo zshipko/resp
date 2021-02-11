@@ -2,14 +2,24 @@ module Value = Resp.String
 open Lwt.Infix
 
 let test_roundtrip _ =
-  Lwt_main.run (
-  let v = `Array [|`String "x"; `Integer 123L; `Bulk "abc"; `String ""; `Bulk ""; `Array [||]; `Array [| `Integer 1L |]|] in
-  let output = ref "" in
-  Value.write output v
-  >>= fun () ->
-  Value.read output
-  >|= fun v' -> Alcotest.(check bool) "compare" (v = v') true)
+  Lwt_main.run
+    (let v =
+       `Array
+         [|
+           `String "x";
+           `Integer 123L;
+           `Bulk "abc";
+           `String "";
+           `Bulk "";
+           `Array [||];
+           `Array [| `Integer 1L |];
+         |]
+     in
+     let output = ref "" in
+     Value.write output v >>= fun () ->
+     Value.read output >|= fun v' ->
+     Alcotest.(check bool) "compare" (v = v') true)
 
 let () =
   Alcotest.run "Resp"
-    [("encoding", [Alcotest.test_case "Roundtrip" `Quick test_roundtrip])]
+    [ ("encoding", [ Alcotest.test_case "Roundtrip" `Quick test_roundtrip ]) ]

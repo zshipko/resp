@@ -4,25 +4,7 @@
   ---------------------------------------------------------------------------*)
 
 open Lwt.Infix
-
-type t =
-  [ `Nil
-  | `Integer of int64
-  | `String of string
-  | `Error of string
-  | `Bulk of string
-  | `Array of t array ]
-
-type lexeme =
-  [ `Nil
-  | `Integer of int64
-  | `String of string
-  | `Error of string
-  | `Bs of int
-  | `As of int ]
-
-type error =
-  [ `Msg of string | `Unexpected of char | `Invalid_value | `Invalid_encoder ]
+include Resp_intf
 
 let pp_error fmt = function
   | `Msg s -> Format.fprintf fmt "%s" s

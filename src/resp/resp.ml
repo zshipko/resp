@@ -274,16 +274,18 @@ let list t l = Array (List.to_seq l |> Seq.map t)
 
 let array t a = Array (Array.to_seq a |> Seq.map t)
 
+let seq_cons i s () = Seq.Cons (i, s)
+
 let alist a b l =
   Array
     (List.fold_left
-       (fun acc (k, v) -> Seq.cons (a k) acc |> Seq.cons (b v))
+       (fun acc (k, v) -> seq_cons (a k) acc |> seq_cons (b v))
        Seq.empty (List.rev l))
 
 let hashtbl a b ht =
   Array
     (Hashtbl.fold
-       (fun k v acc -> Seq.cons (a k) acc |> Seq.cons (b v))
+       (fun k v acc -> seq_cons (a k) acc |> Seq.cons (b v))
        ht Seq.empty)
 
 let id x = x

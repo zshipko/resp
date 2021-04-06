@@ -4,7 +4,7 @@ maintainer: "Zach Shipko <zachshipko@gmail.com>"
 authors: "Zach Shipko <zachshipko@gmail.com>"
 license: "ISC"
 homepage: "https://github.com/zshipko/resp"
-doc: "https://zshipko.github.io/resp/doc"
+doc: "https://zshipko.github.io/resp"
 bug-reports: "https://github.com/zshipko/resp/issues"
 depends: [
   "ocaml" {>= "4.05.0"}

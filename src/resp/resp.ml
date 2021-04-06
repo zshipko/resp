@@ -262,6 +262,16 @@ let to_alist k v = function
 
 let to_alist_exn k v x = to_alist k v x |> unwrap
 
+let to_hashtbl k v a =
+  match to_alist k v a with
+  | Ok a ->
+      let t = Hashtbl.create (List.length a) in
+      List.iter (fun (k, v) -> Hashtbl.replace t k v) a;
+      Ok t
+  | Error e -> Error e
+
+let to_hashtbl_exn k v x = to_hashtbl k v x |> unwrap
+
 (*---------------------------------------------------------------------------
   Copyright (c) 2018 Zach Shipko
 

@@ -130,4 +130,9 @@ module type Resp = sig
   val to_alist : (t -> 'k) -> (t -> 'v) -> t -> (('k * 'v) list, error) result
 
   val to_alist_exn : (t -> 'k) -> (t -> 'v) -> t -> ('k * 'v) list
+
+  val to_hashtbl :
+    (t -> 'k) -> (t -> 'v) -> t -> (('k, 'v) Hashtbl.t, error) result
+
+  val to_hashtbl_exn : (t -> 'k) -> (t -> 'v) -> t -> ('k, 'v) Hashtbl.t
 end

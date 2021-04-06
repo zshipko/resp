@@ -11,7 +11,7 @@ let commands =
   ]
 
 module Main (Clock : PCLOCK) (Conduit : Conduit_mirage.S) = struct
-  let start clock conduit _nocrypto =
+  let start clock conduit =
     let port = 8888 in
     let addr = Ipaddr.of_string_exn "0.0.0.0" in
     let endp = `TCP (addr, port) in

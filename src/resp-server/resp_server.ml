@@ -44,10 +44,9 @@ struct
     default : string;
   }
 
-  let ok { oc; _ } = Value.write oc (`String "OK")
+  let ok { oc; _ } = Value.write oc (Simple_string "OK")
 
-  let error { oc; _ } msg =
-    Value.write oc (`Error (Printf.sprintf "ERR %s" msg))
+  let error { oc; _ } msg = Value.write oc (Error (Printf.sprintf "ERR %s" msg))
 
   let invalid_arguments client = error client "Invalid arguments"
 
@@ -67,9 +66,12 @@ struct
   let check_auth auth args =
     match auth with Some auth -> Auth.check auth args | None -> true
 
-  let split_command_s arr : string * string array =
-    ( String.lowercase_ascii @@ Resp.to_string_exn arr.(0),
-      Array.map Resp.to_string_exn (Array.sub arr 1 (Array.length arr - 1)) )
+  let split_command_s seq : string * string array =
+    match seq () with
+    | Seq.Nil -> invalid_arg "split_command_s"
+    | Seq.Cons (x, next) ->
+        let name = Resp.to_string_exn x |> String.lowercase_ascii in
+        (name, Array.of_seq (Seq.map Resp.to_string_exn next))
 
   let rec discard_n client n =
     if n > 0 then Value.read client.ic >>= fun _ -> discard_n client (n - 1)
@@ -87,7 +89,7 @@ struct
           | Ok (`As n) -> (
               argc := n - 1;
               Value.read client.ic >>= function
-              | `String s | `Bulk s ->
+              | Simple_string s | Bulk (`String s) ->
                   let s = String.lowercase_ascii s in
                   let f =
                     try Hashtbl.find t.commands s
@@ -117,7 +119,7 @@ struct
 
   and handle_not_authenticated t client =
     Value.read client.ic >>= function
-    | `Array arr -> (
+    | Array arr -> (
         let cmd, args = split_command_s arr in
         match (cmd, args) with
         | "auth", args ->

@@ -1,15 +1,15 @@
 type t =
-  [ `Nil
-  | `Integer of int64
-  | `String of string
-  | `Error of string
-  | `Bulk of string
-  | `Array of t array ]
+  | Nil
+  | Integer of int64
+  | Simple_string of string
+  | Error of string
+  | Bulk of [ `String of string | `Bytes of bytes ]
+  | Array of t Seq.t
 
 type lexeme =
   [ `Nil
   | `Integer of int64
-  | `String of string
+  | `Simple_string of string
   | `Error of string
   | `Bs of int
   | `As of int ]
@@ -19,17 +19,17 @@ type error =
 
 module type Resp = sig
   type t =
-    [ `Nil
-    | `Integer of int64
-    | `String of string
-    | `Error of string
-    | `Bulk of string
-    | `Array of t array ]
+    | Nil
+    | Integer of int64
+    | Simple_string of string
+    | Error of string
+    | Bulk of [ `String of string | `Bytes of bytes ]
+    | Array of t Seq.t
 
   type lexeme =
     [ `Nil
     | `Integer of int64
-    | `String of string
+    | `Simple_string of string
     | `Error of string
     | `Bs of int
     | `As of int ]
@@ -125,7 +125,13 @@ module type Resp = sig
 
   val to_array_exn : (t -> 'b) -> t -> 'b array
 
-  val of_alist : (string * t) list -> t
+  val to_list : (t -> 'b) -> t -> ('b list, error) result
+
+  val to_list_exn : (t -> 'b) -> t -> 'b list
+
+  val to_seq : (t -> 'b) -> t -> ('b Seq.t, error) result
+
+  val to_seq_exn : (t -> 'b) -> t -> 'b Seq.t
 
   val to_alist : (t -> 'k) -> (t -> 'v) -> t -> (('k * 'v) list, error) result
 
@@ -135,4 +141,30 @@ module type Resp = sig
     (t -> 'k) -> (t -> 'v) -> t -> (('k, 'v) Hashtbl.t, error) result
 
   val to_hashtbl_exn : (t -> 'k) -> (t -> 'v) -> t -> ('k, 'v) Hashtbl.t
+
+  val int : int -> t
+
+  val int64 : int64 -> t
+
+  val float : float -> t
+
+  val bytes : bytes -> t
+
+  val string : string -> t
+
+  val simple_string : string -> t
+
+  val nil : t
+
+  val array : ('a -> t) -> 'a array -> t
+
+  val list : ('a -> t) -> 'a list -> t
+
+  val alist : ('k -> t) -> ('v -> t) -> ('k * 'v) list -> t
+
+  val hashtbl : ('k -> t) -> ('v -> t) -> ('k, 'v) Hashtbl.t -> t
+
+  val id : 'a -> 'a
+
+  val equal : t -> t -> bool
 end

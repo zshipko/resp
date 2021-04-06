@@ -11,9 +11,9 @@ module type S = sig
 
   val write : t -> Resp.t -> unit Lwt.t
 
-  val run : t -> Resp.t array -> Resp.t Lwt.t
+  val run : t -> Resp.t list -> Resp.t Lwt.t
 
-  val run_s : t -> string array -> Resp.t Lwt.t
+  val run_s : t -> string list -> Resp.t Lwt.t
 
   val decode : t -> Resp.lexeme -> Resp.t Lwt.t
 

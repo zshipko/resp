@@ -19,7 +19,7 @@ module Make (Server : Resp_server.S) = struct
             Server.recv client >>= fun key ->
             try
               let value = Hashtbl.find ht (Resp.to_string_exn key) in
-              Server.send client (`Bulk value)
+              Server.send client (Bulk (`String value))
             with Not_found -> Server.error client "Not found" );
     ]
 end

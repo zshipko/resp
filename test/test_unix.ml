@@ -45,14 +45,14 @@ let invalid_response () = Alcotest.fail "Invalid response type"
 
 let test_set _ =
   Lwt_main.run
-    (Client.run_s client [| "set"; "abc"; "123" |] >|= function
-     | `String s -> Alcotest.(check string) "set OK" s "OK"
+    (Client.run_s client [ "set"; "abc"; "123" ] >|= function
+     | Simple_string s -> Alcotest.(check string) "set OK" s "OK"
      | _ -> invalid_response ())
 
 let test_get _ =
   Lwt_main.run
-    (Client.run_s client [| "get"; "abc" |] >|= function
-     | `Bulk s -> Alcotest.(check string) "Value of abc" s "123"
+    (Client.run_s client [ "get"; "abc" ] >|= function
+     | Bulk (`String s) -> Alcotest.(check string) "Value of abc" s "123"
      | _ -> invalid_response ())
 
 let basic =

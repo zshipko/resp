@@ -1,34 +1,4 @@
-module type S = sig
-  include Resp.S
-
-  type t
-
-  type params
-
-  val connect : params -> t Lwt.t
-
-  val read : t -> Resp.t Lwt.t
-
-  val write : t -> Resp.t -> unit Lwt.t
-
-  val run : t -> Resp.t array -> Resp.t Lwt.t
-
-  val run_s : t -> string array -> Resp.t Lwt.t
-
-  val decode : t -> Resp.lexeme -> Resp.t Lwt.t
-
-  val read_lexeme : t -> Resp.lexeme Lwt.t
-end
-
-module type CLIENT = sig
-  type ic
-
-  type oc
-
-  type params
-
-  val connect : params -> (ic * oc) Lwt.t
-end
+include Resp_client_intf
 
 module Make
     (Client : CLIENT)
@@ -53,8 +23,10 @@ struct
     S.Reader.read_lexeme ic >>= fun x -> Resp.unwrap x |> Lwt.return
 
   let run_s client cmd =
-    let cmd = Array.map (fun s -> `Bulk s) cmd in
-    write client (`Array cmd) >>= fun () -> read client
+    let cmd = List.to_seq cmd |> Seq.map (fun s -> Resp.string s) in
+    write client (Array cmd) >>= fun () -> read client
 
-  let run client cmd = write client (`Array cmd) >>= fun () -> read client
+  let run client cmd =
+    let cmd = List.to_seq cmd in
+    write client (Array cmd) >>= fun () -> read client
 end

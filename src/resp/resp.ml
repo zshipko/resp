@@ -285,7 +285,7 @@ let alist a b l =
 let hashtbl a b ht =
   Array
     (Hashtbl.fold
-       (fun k v acc -> seq_cons (a k) acc |> Seq.cons (b v))
+       (fun k v acc -> seq_cons (a k) acc |> seq_cons (b v))
        ht Seq.empty)
 
 let id x = x

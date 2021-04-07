@@ -28,14 +28,13 @@ jobs:
         run: 'opam env >> $GITHUB_ENV'
       - name: 'Add Opam switch to PATH'
         run: 'opam var bin >> $GITHUB_PATH'
-      - run: 'opam install . --deps-only --with-test'
+      - run: 'OPAMSOLVERTIMEOUT=3600 opam install . --deps-only --with-test'
       - name: 'Run OCaml tests'
         run: 'opam exec -- dune runtest'
     strategy:
       fail-fast: true
       matrix:
         ocaml-version:
-          - 4.12.0
           - 4.11.1
           - 4.10.0
           - 4.09.1

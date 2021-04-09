@@ -17,3 +17,13 @@ depends: [
 ]
 build: ["dune" "build" "-p" name]
 dev-repo: "git+https://github.com/zshipko/resp.git"
+
+synopsis: """
+Redis serialization protocol for MirageOS
+"""
+
+description: """
+Redis protocol client library
+
+Create RESP clients and servers for MirageOS
+"""

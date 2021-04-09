@@ -24,3 +24,9 @@ build:
 synopsis: """
 Redis serialization protocol server
 """
+
+description: """
+Redis protocol server
+
+Provides an interface for creating RESP servers with a user-defined IO backend
+"""

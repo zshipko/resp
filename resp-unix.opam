@@ -21,3 +21,13 @@ build: [
   ["dune" "runtest" "-p" name] {with-test}
 ]
 dev-repo: "git+https://github.com/zshipko/resp.git"
+
+synopsis: """
+Redis serialization protocol server
+"""
+
+description: """
+Redis protocol for Unix
+
+Defines a Unix-compaible client and server using Lwt
+"""

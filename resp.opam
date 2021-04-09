@@ -26,3 +26,9 @@ build:
 synopsis: """
 Redis serialization protocol library
 """
+
+description: """
+Redis protocol client library
+
+This base package provides types and encoder/decoder
+"""

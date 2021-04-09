@@ -25,7 +25,5 @@ Redis serialization protocol client library
 """
 
 description: """
-Redis protocol client library
-
-Create RESP clients with pluggable IO backends
+Redis protocol client library for Lwt
 """

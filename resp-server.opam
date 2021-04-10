@@ -11,9 +11,9 @@ tags: []
 depends:
 [
     "ocaml" {>= "4.07.0"}
-    "dune" {build}
-    "resp" {>= version}
-    "resp-client" {>= version}
+    "dune" {build & > "2.0.0"}
+    "resp" {= version}
+    "resp-client" {= version}
 ]
 
 build:

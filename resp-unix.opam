@@ -1,5 +1,4 @@
 opam-version: "2.0"
-synopsis: "Redis serialization protocol library for Unix"
 maintainer: "Zach Shipko <zachshipko@gmail.com>"
 authors: "Zach Shipko <zachshipko@gmail.com>"
 license: "ISC"
@@ -23,7 +22,7 @@ build: [
 dev-repo: "git+https://github.com/zshipko/resp.git"
 
 synopsis: """
-Redis serialization protocol server
+Redis serialization protocol for Unix
 """
 
 description: """

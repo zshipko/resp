@@ -11,7 +11,7 @@ depends: [
   "resp" {= version}
   "resp-client" {= version}
   "resp-server" {= version}
-  "conduit-lwt-unix" {>= "2.0.0"}
+  "conduit-lwt-unix" {>= "5.0.0"}
   "alcotest" {with-test}
   "lwt"
 ]

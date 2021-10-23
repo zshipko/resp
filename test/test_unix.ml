@@ -30,14 +30,14 @@ let client, pid =
         let server = `TCP (`Port 1234) in
         let data = Hashtbl.create 8 in
         let server =
-          Server.create ~commands (Conduit_lwt_unix.default_ctx, server) data
+          Server.create ~commands (Lazy.force Conduit_lwt_unix.default_ctx, server) data
         in
         Server.start server >|= fun () -> exit 0
     | pid ->
         Unix.sleep 1;
         let addr = Ipaddr.of_string_exn "127.0.0.1" in
         let params =
-          (Conduit_lwt_unix.default_ctx, `TCP (`IP addr, `Port 1234))
+          (Lazy.force Conduit_lwt_unix.default_ctx, `TCP (`IP addr, `Port 1234))
         in
         Client.connect params >|= fun client -> (client, pid))
 

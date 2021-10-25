@@ -6,12 +6,12 @@ homepage: "https://github.com/zshipko/resp"
 doc: "https://zshipko.github.io/resp"
 bug-reports: "https://github.com/zshipko/resp/issues"
 depends: [
-  "ocaml" {>= "4.07.0"}
+  "ocaml" {>= "4.10.0"}
   "dune" {>= "2.0.0"}
   "resp" {= version}
   "resp-client" {= version}
   "resp-server" {= version}
-  "conduit-lwt-unix" {>= "2.0.0"}
+  "conduit-lwt-unix" {>= "5.0.0"}
   "alcotest" {with-test}
   "lwt"
 ]

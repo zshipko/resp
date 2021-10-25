@@ -7,7 +7,7 @@ module Make (C : Conduit_mirage.S) = struct
     type ic = buffer
 
     let update_buffer_if_needed t n =
-      let buflen = Cstruct.len t.buffer in
+      let buflen = Cstruct.length t.buffer in
       if buflen < n then
         C.Flow.read t.flow >|= function
         | Ok (`Data c) -> t.buffer <- Cstruct.append t.buffer c
@@ -18,7 +18,7 @@ module Make (C : Conduit_mirage.S) = struct
       else Lwt.return_unit
 
     let get_string t n =
-      let buflen = Cstruct.len t.buffer in
+      let buflen = Cstruct.length t.buffer in
       if n > buflen then raise End_of_file
       else
         let c, d = Cstruct.split t.buffer n in
@@ -29,7 +29,7 @@ module Make (C : Conduit_mirage.S) = struct
 
     let read_char t =
       let rec aux () =
-        let buflen = Cstruct.len t.buffer in
+        let buflen = Cstruct.length t.buffer in
         if buflen > 0 then
           let c = Cstruct.get_char t.buffer 0 in
           let () = t.buffer <- Cstruct.sub t.buffer 1 (buflen - 1) in

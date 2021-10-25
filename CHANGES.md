@@ -1,4 +1,4 @@
-# Unreleased
+# v0.11.0
 - Updates for `Conduit` and `Cstruct`
 
 # v0.10.0

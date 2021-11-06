@@ -6,12 +6,6 @@ end
 
 module type DATA = sig
   type data
-
-  module Client : sig
-    type t
-
-    val init : data -> t
-  end
 end
 
 module type SERVER = sig
@@ -33,7 +27,7 @@ module type S = sig
 
   module Auth : AUTH
 
-  type client = { data : Client.t; ic : ic; oc : oc }
+  type client = { data : data; ic : ic; oc : oc }
 
   type command = data -> client -> string -> int -> unit Lwt.t
 
@@ -92,5 +86,4 @@ module type Server = sig
        and type oc = Server.oc
        and module Value = Value
        and type data = Server.data
-       and type Client.t = Server.Client.t
 end

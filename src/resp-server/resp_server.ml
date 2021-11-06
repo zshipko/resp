@@ -32,7 +32,7 @@ struct
 
   let ( >>= ) = Lwt.( >>= )
 
-  type client = { data : Client.t; ic : ic; oc : oc }
+  type client = { data : Server.data; ic : ic; oc : oc }
 
   type command = data -> client -> string -> int -> unit Lwt.t
 
@@ -137,7 +137,6 @@ struct
 
   let start t =
     run t.server (fun (ic, oc) ->
-        let data = Client.init t.data in
-        let client = { ic; oc; data } in
+        let client = { ic; oc; data = t.data } in
         handle t client (t.auth = None))
 end

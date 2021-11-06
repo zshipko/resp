@@ -7,7 +7,6 @@ module Backend (Data : Resp_server.DATA) :
     with type oc = Lwt_io.output_channel
      and type ic = Lwt_io.input_channel
      and type data = Data.data
-     and type Client.t = Data.Client.t
 
 module Server : sig
   module Make (Auth : Resp_server.AUTH) (Data : Resp_server.DATA) :
@@ -17,7 +16,6 @@ module Server : sig
        and type oc = Writer.oc
        and type server = Conduit_lwt_unix.ctx * Conduit_lwt_unix.server
        and type data = Data.data
-       and type Client.t = Data.Client.t
 
   module Default :
     Resp_server.S
@@ -26,7 +24,6 @@ module Server : sig
        and type oc = Writer.oc
        and type server = Conduit_lwt_unix.ctx * Conduit_lwt_unix.server
        and type data = unit
-       and type Client.t = unit
 end
 
 module Client :

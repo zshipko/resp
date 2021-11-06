@@ -10,7 +10,6 @@ module Make (C : Conduit_mirage.S) : sig
       with type oc = C.Flow.flow
        and type ic = buffer
        and type data = Data.data
-       and type Client.t = Data.Client.t
 
   module Server : sig
     module Make (Auth : Resp_server.AUTH) (Data : Resp_server.DATA) :
@@ -20,7 +19,6 @@ module Make (C : Conduit_mirage.S) : sig
          and type oc = Writer.oc
          and type server = C.t * Conduit_mirage.server
          and type data = Data.data
-         and type Client.t = Data.Client.t
 
     module Default :
       Resp_server.S
@@ -29,7 +27,6 @@ module Make (C : Conduit_mirage.S) : sig
          and type oc = Writer.oc
          and type server = C.t * Conduit_mirage.server
          and type data = unit
-         and type Client.t = unit
   end
 
   module Client :

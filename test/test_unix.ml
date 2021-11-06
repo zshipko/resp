@@ -10,12 +10,6 @@ module Server =
     (Resp_server.Auth.String)
     (struct
       type data = (string, string) Hashtbl.t
-
-      module Client = struct
-        type t = unit
-
-        let init _ = ()
-      end
     end)
 
 include Util.Make (Server)
@@ -30,7 +24,9 @@ let client, pid =
         let server = `TCP (`Port 1234) in
         let data = Hashtbl.create 8 in
         let server =
-          Server.create ~commands (Lazy.force Conduit_lwt_unix.default_ctx, server) data
+          Server.create ~commands
+            (Lazy.force Conduit_lwt_unix.default_ctx, server)
+            data
         in
         Server.start server >|= fun () -> exit 0
     | pid ->

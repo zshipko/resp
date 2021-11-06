@@ -104,12 +104,6 @@ module Make (C : Conduit_mirage.S) = struct
         (Resp_server.Auth.String)
         (struct
           type data = unit
-
-          module Client = struct
-            type t = unit
-
-            let init _ = ()
-          end
         end)
   end
 
